@@ -135,6 +135,8 @@ async def frag_overview(request: Request):
     except BlocknetError as exc:
         if exc.kind == "locked":
             wallet["locked"] = True
+        elif "no wallet loaded" in str(exc):
+            wallet["not_loaded"] = True
         else:
             wallet["error"] = str(exc)
     try:
@@ -364,6 +366,30 @@ async def frag_save_settings(request: Request):
     params = await body_params(request)
     apply_settings(params)
     return frag(request, "frags/_settings.html", {"settings": db.get_settings(), "saved": True})
+
+
+# --- wallet reload (one-shot pass-through, password never stored) -----------
+
+@router.post("/admin/frag/wallet-load", response_class=HTMLResponse)
+async def frag_wallet_load(request: Request):
+    """User-initiated wallet load on the core (e.g. after a core restart).
+    Forwards path + password to the core once and discards them."""
+    require_admin(request)
+    params = await body_params(request)
+    path = str(params.get("wallet_path", "")).strip()
+    password = str(params.get("wallet_password", ""))
+    if not path or not password:
+        overview_html = (await frag_overview(request)).body.decode("utf-8")
+        return HTMLResponse(
+            '<div class="banner">Wallet file and password are both required.</div>' + overview_html
+        )
+    try:
+        result = await request.app.state.client.wallet_load(path, password)
+        banner = f'<div class="banner ok">Wallet {result} — payments are being watched again.</div>'
+    except BlocknetError as exc:
+        banner = f'<div class="banner">Wallet not loaded: {exc}</div>'
+    overview_html = (await frag_overview(request)).body.decode("utf-8")
+    return HTMLResponse(banner + overview_html)
 
 
 # --- send (manual payouts/refunds) -----------------------------------------

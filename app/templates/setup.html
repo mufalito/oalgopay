@@ -40,6 +40,14 @@
       <input name="public_base_url" value="{{ public_base_url }}">
     </label>
 
+    <h2 style="margin:8px 0 0;">Wallet (optional — loads it on the core now)</h2>
+    <label>Wallet file
+      <input name="wallet_path" placeholder="/path/to/shop.wallet.dat">
+    </label>
+    <label>Wallet password (sent to the core once, never stored)
+      <input name="wallet_password" type="password" autocomplete="off">
+    </label>
+
     <h2 style="margin:8px 0 0;">Payments (defaults are fine)</h2>
     <label>Confirmations required (1–20)
       <input type="number" name="confirmations_required" min="1" max="20" value="{{ confirmations }}">

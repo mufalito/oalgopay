@@ -120,6 +120,8 @@ async def setup_submit(request: Request):
     public_base_url = str(params.get("public_base_url", "")).strip().rstrip("/")
     display_handle = str(params.get("display_handle", "")).strip()
     webhook_url = str(params.get("webhook_url", "")).strip()
+    wallet_path = str(params.get("wallet_path", "")).strip()
+    wallet_password = str(params.get("wallet_password", ""))
     confirmations = params.get("confirmations_required", 10)
     expiry = params.get("expiry_minutes", 60)
 
@@ -175,6 +177,18 @@ async def setup_submit(request: Request):
     if webhook_url:
         db.create_webhook_endpoint(webhook_url, pysecrets.token_hex(32))
 
-    resp = HTMLResponse('<div class="banner ok">Setup complete — opening the admin panel…</div>')
+    wallet_note = ""
+    if wallet_path and wallet_password:
+        try:
+            result = await state.client.wallet_load(wallet_path, wallet_password)
+            wallet_note = f"Wallet {result} on the core."
+        except BlocknetError as exc:
+            wallet_note = f"Wallet NOT loaded: {exc} — load it from the admin panel later."
+    elif wallet_path or wallet_password:
+        wallet_note = "Wallet NOT loaded: both file and password are required."
+
+    resp = HTMLResponse(
+        f'<div class="banner ok">Setup complete — {wallet_note}opening the admin panel…</div>'
+    )
     resp.headers["HX-Redirect"] = "/admin"
     return resp

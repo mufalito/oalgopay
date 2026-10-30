@@ -19,12 +19,20 @@
   <div class="card">
     <h2>Wallet</h2>
     <div class="kv">
-      <div><span class="k">Address</span><span class="v mono" style="font-size:11px">{{ (wallet.address or "")[:28] }}…</span></div>
-      <div><span class="k">State</span><span class="v {{ 'err' if wallet.locked else 'ok' }}">{{ "locked (unlock in GUI)" if wallet.locked else "unlocked" }}</span></div>
+      <div><span class="k">Address</span><span class="v mono" style="font-size:11px">{{ (wallet.address or "")[:28] }}{% if wallet.address %}…{% endif %}</span></div>
+      <div><span class="k">State</span><span class="v {{ 'err' if (wallet.locked or wallet.not_loaded) else 'ok' }}">{% if wallet.not_loaded %}no wallet loaded{% elif wallet.locked %}locked{% else %}unlocked{% endif %}</span></div>
       {% for k, v in fmt_balance(wallet.balance) %}
       <div><span class="k">{{ k }}</span><span class="v">{{ v }} BNT</span></div>
       {% endfor %}
       {% if wallet.error %}<div><span class="k">Error</span><span class="v err">{{ wallet.error }}</span></div>{% endif %}
+      {% if wallet.locked or wallet.not_loaded or wallet.error or not wallet.address %}
+      <form class="inline-form" style="margin-top:10px" hx-post="/admin/frag/wallet-load" hx-target="#view-overview" hx-swap="innerHTML">
+        <input name="wallet_path" placeholder="/path/to/shop.wallet.dat" required>
+        <input name="wallet_password" type="password" placeholder="password" autocomplete="off" required>
+        <button class="btn primary" type="submit">Load wallet</button>
+      </form>
+      <div class="hint" style="font-size:11px">Sent to the core once, never stored.</div>
+      {% endif %}
     </div>
   </div>
   <div class="card">

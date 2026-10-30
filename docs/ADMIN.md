@@ -14,7 +14,9 @@ Live dashboard, refreshed on visit:
   A degraded node (core down / wallet locked) shows a red banner; the gateway
   keeps creating invoices and resumes watching automatically.
 - **Wallet** — the shop stealth address, lock state, balances
-  (total/spendable/pending, BNT).
+  (total/spendable/pending, BNT). When no wallet is loaded (e.g. after a
+  core restart) a **Load wallet** form appears here: file + password are
+  sent to the core once and never stored.
 - **Handle** — the configured `$handle` (e.g. `$yourname`) with its
   blocknet.id resolution: **✓ signature valid** means the resolver payload
   was Ed25519-verified against `blocknet.id/.well-known/blocknet-id.json`

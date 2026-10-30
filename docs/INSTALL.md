@@ -71,6 +71,9 @@ paymentgateway/
      wallet loaded + unlocked (distinct messages for "locked" and
      "no wallet loaded"),
    - generates an admin password + API token (regenerate button),
+   - optional **wallet step**: wallet file + password load the wallet on the
+     core immediately — the password is forwarded once and discarded, never
+     written to `config.json` or anywhere else,
    - takes `public_base_url` (defaults to the address you're browsing from),
      confirmations (10), expiry (60 min), display handle, and an optional
      webhook URL,
@@ -135,9 +138,11 @@ systemctl --user enable --now oalgopay-core oalgopay
 journalctl --user -u oalgopay -f
 ```
 
-> The wallet load step is manual by design (no gateway-side credential
-> handling). After a core restart, run the `api/wallet/load` curl from
-> [First start](#first-start) once, or script it alongside the unit.
+> After a core restart the wallet is unloaded (by design). Reload it from
+> the admin panel's Overview — the **Load wallet** form appears whenever no
+> wallet is loaded — or with the `api/wallet/load` curl from
+> [First start](#first-start). The password is sent to the core once and
+> never stored by the gateway.
 
 ## Backup & restore
 
@@ -167,7 +172,7 @@ journalctl --user -u oalgopay -f
 | Symptom | Meaning / fix |
 |---|---|
 | Panel banner "Node degraded … api.cookie" | Core not running → start `oalgopay-core`. The gateway re-reads the cookie on 401 automatically once it's back. |
-| Panel shows wallet `locked (unlock in GUI)` or history errors "wallet is locked"/"no wallet loaded" | Load the wallet via `api/wallet/load` (see First start). Watching resumes automatically; no gateway restart needed. |
+| Panel shows wallet `no wallet loaded` / `locked` | Use the **Load wallet** form on the Overview (or the `api/wallet/load` curl in First start). Watching resumes automatically; no gateway restart needed. |
 | Invoice stuck `pending` after a customer paid | Blocks may be slow (check node height in Overview). This core reveals sent-to-self outputs once mined; the watcher polls every 60 s + on every new block. If the customer really paid, the startup/2016-block reconciliation or the next poll will match it. |
 | `Send` fails with "insufficient spendable balance … pending (confirming)" | Normal after any send: the change output needs ~10 confirmations before it is spendable again. Wait for blocks. |
 | Webhook delivery log shows ConnectError rows | Endpoint unreachable/down. Retries: 30 s, 2 m, 10 m, 30 m, 2 h, then permanent fail. Test with the "Test" button once your receiver is up. |

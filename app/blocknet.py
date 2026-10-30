@@ -1,7 +1,9 @@
 """Async client for the local Blocknet daemon REST API (Bearer token from api.cookie).
 
-ALL node interaction goes through BlocknetClient. The gateway never loads,
-unloads, or unlocks wallets — the GUI owns wallet state. On 401 the cookie is
+ALL node interaction goes through BlocknetClient. The gateway holds no wallet
+credentials: the only exception is wallet_load(), a one-shot pass-through
+invoked exclusively by explicit user action (setup wizard / admin reload) —
+the password is forwarded to the core and discarded. On 401 the cookie is
 re-read once and the request retried once (daemon restarts regenerate it).
 """
 from __future__ import annotations
@@ -75,6 +77,22 @@ class BlocknetClient:
 
     async def get_status(self) -> dict[str, Any]:
         return await self._request("GET", "/api/status")
+
+    async def wallet_load(self, path: str, password: str) -> str:
+        """One-shot, user-initiated wallet load on the core (setup wizard /
+        admin reload action). The password is used for this request only —
+        never stored, never logged. Returns "loaded" or "already-loaded".
+        """
+        try:
+            await self._request(
+                "POST", "/api/wallet/load",
+                json_body={"path": path, "password": password},
+            )
+            return "loaded"
+        except BlocknetError as exc:
+            if "already loaded" in str(exc):
+                return "already-loaded"
+            raise
 
     async def wallet_address(self) -> str:
         data = await self._request("GET", "/api/wallet/address")
