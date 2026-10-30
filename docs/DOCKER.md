@@ -27,14 +27,16 @@ Open **http://localhost:8096** — the wizard prefills `http://core:18512` and
 Container paths matter: the wallet lives at **`/wallets/<file>`** inside the
 core container — use that path in the wizard and the panel's Load-wallet form.
 
-Because the core resolves its `wallet_file` at startup, the **first** wallet
-load on a fresh volume needs one core restart:
-
 1. Wizard (or panel) → wallet path `/wallets/shop.wallet.dat` + password
 2. The gateway writes `wallet_file` into the core's settings and tells you a
    restart is needed
 3. `docker compose restart core`
 4. Admin panel → Overview → **Load wallet** → same path + password → done
+
+<p align="center">
+  <img src="img/admin-wallet-load.png" width="460" alt="Load wallet form on the admin Overview">
+</p>
+
 
 Later core restarts keep `wallet_file` configured, so loading works without
 the settings step.
