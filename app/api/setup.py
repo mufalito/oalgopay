@@ -178,15 +178,25 @@ async def setup_submit(request: Request):
         db.create_webhook_endpoint(webhook_url, pysecrets.token_hex(32))
 
     wallet_note = ""
+    wallet_failed = False
     if wallet_path and wallet_password:
         try:
             result = await state.client.wallet_load(wallet_path, wallet_password)
-            wallet_note = f"Wallet {result} on the core."
+            wallet_note = f"Wallet {result} on the core. "
         except BlocknetError as exc:
-            wallet_note = f"Wallet NOT loaded: {exc} — load it from the admin panel later."
+            wallet_note = f"Wallet NOT loaded — {exc}. "
+            wallet_failed = True
     elif wallet_path or wallet_password:
-        wallet_note = "Wallet NOT loaded: both file and password are required."
+        wallet_note = "Wallet NOT loaded — both file and password are required. "
+        wallet_failed = True
 
+    if wallet_failed:
+        # stay on the page so the message is actually read; setup itself is done
+        return HTMLResponse(
+            f'<div class="banner">Setup complete — {wallet_note}'
+            f'The admin panel is at <a href="/admin">/admin</a> '
+            f'(password you set above).</div>'
+        )
     resp = HTMLResponse(
         f'<div class="banner ok">Setup complete — {wallet_note}opening the admin panel…</div>'
     )

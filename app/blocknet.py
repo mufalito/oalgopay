@@ -78,11 +78,27 @@ class BlocknetClient:
     async def get_status(self) -> dict[str, Any]:
         return await self._request("GET", "/api/status")
 
+    def _ensure_wallet_file_setting(self, wallet_path: str) -> None:
+        """Point the core's settings.json wallet_file at wallet_path.
+        The core resolves wallet_file at STARTUP, so on a fresh install the
+        first load needs one core restart before it can succeed."""
+        settings_path = self.cookie_path.parent / "settings.json"
+        try:
+            settings = json.loads(settings_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            settings = {}
+        absolute = str(Path(wallet_path).resolve())
+        if settings.get("wallet_file") != absolute:
+            settings["wallet_file"] = absolute
+            settings_path.write_text(json.dumps(settings, indent=2))
+
     async def wallet_load(self, path: str, password: str) -> str:
         """One-shot, user-initiated wallet load on the core (setup wizard /
         admin reload action). The password is used for this request only —
         never stored, never logged. Returns "loaded" or "already-loaded".
-        """
+        Raises with a restart-required message when the core started before
+        wallet_file was configured (fresh installs)."""
+        self._ensure_wallet_file_setting(path)
         try:
             await self._request(
                 "POST", "/api/wallet/load",
@@ -90,8 +106,15 @@ class BlocknetClient:
             )
             return "loaded"
         except BlocknetError as exc:
-            if "already loaded" in str(exc):
+            message = str(exc)
+            if "already loaded" in message:
                 return "already-loaded"
+            if "file not found" in message or exc.status == 404:
+                raise BlocknetError(
+                    "wallet_file was just configured in the core's settings.json — "
+                    "restart the core once, then load again",
+                    "restart-required",
+                ) from exc
             raise
 
     async def wallet_address(self) -> str:
