@@ -1,0 +1,58 @@
+<div id="pay-status"
+     {% if inv.status not in ("confirmed", "cancelled") %}
+     hx-get="/pay/{{ inv.id }}/status-frag" hx-trigger="every 5s" hx-swap="outerHTML"
+     {% endif %}
+     data-expires="{{ inv.expires_at }}">
+  <div class="meta">
+    <div class="line">
+      <span class="k">Status</span>
+      <span class="v"><span class="status-badge" data-status="{{ inv.status }}">{{ inv.status }}</span></span>
+    </div>
+    <div class="line">
+      <span class="k">Received</span>
+      <span class="v mono">{{ inv.paid_bnt }} BNT</span>
+    </div>
+    <div class="line">
+      <span class="k">Confirmations</span>
+      <span class="v mono">{{ inv.confirmations }} / {{ inv.confirmations_required }}</span>
+    </div>
+    <div class="line">
+      <span class="k">Expires</span>
+      <span class="v mono" id="countdown">—</span>
+    </div>
+  </div>
+  <div class="payments" id="payments">
+    {% for p in inv.payments %}
+    <div class="payment">
+      <div class="txid">{{ p.txid }}</div>
+      <div>{{ p.amount_bnt }} BNT ·
+        {% if p.confirmations == 0 %}in mempool{% else %}{{ p.confirmations }} conf.{% endif %}
+        {% if inv.status == "expired" %} · late (awaiting confirmation){% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<script>
+  (function () {
+    var el = document.getElementById("pay-status");
+    var cd = document.getElementById("countdown");
+    var expires = parseInt(el.dataset.expires || "0", 10);
+    var status = el.querySelector(".status-badge");
+    var st = status ? status.dataset.status : "";
+    function fmt(ms) {
+      if (ms <= 0) return "expired";
+      var s = Math.floor(ms / 1000), m = Math.floor(s / 60); s %= 60;
+      var h = Math.floor(m / 60); m %= 60;
+      return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(s).padStart(2, "0");
+    }
+    function tick() {
+      if (st === "confirmed") { cd.textContent = "—"; return; }
+      if (st === "cancelled") { cd.textContent = "cancelled"; return; }
+      cd.textContent = fmt(expires * 1000 - Date.now());
+    }
+    tick();
+    if (window.__payCountdownTimer) clearInterval(window.__payCountdownTimer);
+    window.__payCountdownTimer = setInterval(tick, 1000);
+  })();
+</script>

@@ -1,0 +1,41 @@
+{% if error %}<div class="banner">{{ error }}</div>{% endif %}
+{% if result %}
+<div class="banner ok">
+  Sent {{ fmt_bnt(result.amount_atomic) }} BNT to {{ result.address[:20] }}…<br>
+  txid <span class="mono">{{ result.txid }}</span>{% if result.fee_atomic %} · fee {{ fmt_bnt(result.fee_atomic) }} BNT{% endif %}
+</div>
+{% endif %}
+<div id="send-frag">
+  <form class="inline-form" hx-post="/admin/frag/send" hx-target="#view-send" hx-swap="innerHTML"
+        hx-confirm="Send funds now? This spends real BNT."
+        hx-disabled-elt="find button">
+    <input name="address" placeholder="recipient address (ULP…)" style="flex:2" required>
+    <input name="amount_bnt" placeholder="amount (BNT)" inputmode="decimal" required>
+    <input name="memo" placeholder="memo (optional)">
+    <button class="btn primary" type="submit">Send</button>
+  </form>
+  <div class="hint" style="margin:8px 0 16px">
+    Every send uses a fresh daemon idempotency key and is recorded below.
+    A memo containing an <span class="mono">INV-…</span> id sent to this
+    gateway's own address will credit that invoice as paid.
+  </div>
+  <h2>Recent sends</h2>
+  <table>
+    <thead><tr><th>#</th><th>When</th><th>Address</th><th>Amount</th><th>Fee</th><th>Memo</th><th>Txid</th></tr></thead>
+    <tbody>
+      {% for p in payouts %}
+      <tr>
+        <td>{{ p.id }}</td>
+        <td>{{ fmt_time(p.created_at) }}</td>
+        <td class="mono" title="{{ p.address }}">{{ p.address[:16] }}…</td>
+        <td>{{ fmt_bnt(p.amount_atomic) }}</td>
+        <td>{% if p.fee_atomic %}{{ fmt_bnt(p.fee_atomic) }}{% else %}—{% endif %}</td>
+        <td>{{ p.memo or "—" }}</td>
+        <td>{% if p.txid %}<span class="mono" title="{{ p.txid }}">{{ p.txid[:14] }}…</span>{% else %}<span class="err">{{ p.error or "pending" }}</span>{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="color:var(--muted)">no sends yet</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

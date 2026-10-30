@@ -1,0 +1,9 @@
+{% if rows %}
+<div class="banner" style="border-color:var(--border);color:var(--fg);">
+  <div class="kv">
+    {% for r in rows %}
+    <div><span class="k">{{ r.k }}</span><span class="v {{ 'ok' if r.ok else 'err' }}">{% if r.ok %}✓{% else %}✗{% endif %} {{ r.v }}</span></div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}

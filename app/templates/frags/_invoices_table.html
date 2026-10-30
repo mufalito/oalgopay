@@ -1,0 +1,18 @@
+<table id="inv-table">
+  <thead><tr><th>ID</th><th>Amount</th><th>Paid</th><th>Status</th><th>Created</th><th>Expires</th></tr></thead>
+  <tbody>
+    {% for i in invoices %}
+    <tr class="clickable" hx-get="/admin/frag/invoice/{{ i.id }}" hx-target="#inv-detail" hx-swap="innerHTML">
+      <td class="mono">{{ i.id }}</td>
+      <td>{{ fmt_bnt(i.amount_atomic) }}</td>
+      <td>{{ fmt_bnt(i.paid_atomic) }}</td>
+      <td><span class="status-chip {{ i.status }}">{{ i.status }}</span></td>
+      <td>{{ fmt_time(i.created_at) }}</td>
+      <td>{{ fmt_time(i.expires_at) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="color:var(--muted)">no invoices</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div id="inv-detail">{% if inv %}{% include "frags/_invoice_detail.html" %}{% endif %}</div>

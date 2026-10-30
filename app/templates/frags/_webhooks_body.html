@@ -1,0 +1,41 @@
+<table id="wh-table">
+  <thead><tr><th>ID</th><th>URL</th><th>Active</th><th></th></tr></thead>
+  <tbody>
+    {% for ep in endpoints %}
+    <tr>
+      <td>{{ ep.id }}</td>
+      <td class="mono">{{ ep.url }}</td>
+      <td>{% if ep.active %}<span class="ok">active</span>{% else %}<span class="err">paused</span>{% endif %}</td>
+      <td style="white-space:nowrap">
+        <button class="btn" hx-post="/admin/frag/webhook/{{ ep.id }}/toggle" hx-target="#wh-wrap" hx-swap="innerHTML">{{ "Pause" if ep.active else "Resume" }}</button>
+        <button class="btn" hx-post="/admin/frag/webhook/{{ ep.id }}/test" hx-target="#wh-wrap" hx-swap="innerHTML">Test</button>
+        <button class="btn danger" hx-post="/admin/frag/webhook/{{ ep.id }}/delete" hx-target="#wh-wrap" hx-swap="innerHTML">Delete</button>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" style="color:var(--muted)">no endpoints</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<h2>Delivery log</h2>
+<table id="dl-table">
+  <thead><tr><th>#</th><th>Event</th><th>Invoice</th><th>Attempts</th><th>Status</th><th>Delivered</th></tr></thead>
+  <tbody>
+    {% for d in deliveries %}
+    <tr>
+      <td>{{ d.id }}</td>
+      <td>{{ d.event }}</td>
+      <td class="mono">{{ d.invoice_id or "—" }}</td>
+      <td>{{ d.attempts }}</td>
+      <td>
+        {% if d.delivered_at %}<span class="ok">delivered</span>
+        {% elif d.last_status %}<span class="err">{{ d.last_status }} {{ d.last_error or "" }}</span>
+        {% else %}queued{% endif %}
+      </td>
+      <td>{{ fmt_time(d.delivered_at) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="color:var(--muted)">no deliveries yet</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

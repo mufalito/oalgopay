@@ -1,0 +1,16 @@
+<form class="inline-form" hx-post="/admin/frag/invoice" hx-swap="none"
+      hx-on::after-request="if(event.detail.successful) this.reset()">
+  <input name="amount_bnt" placeholder="amount (BNT)" inputmode="decimal" required>
+  <input name="label" placeholder="label (optional)">
+  <input name="expires_in_min" placeholder="expiry min" inputmode="numeric" style="max-width:110px">
+  <button class="btn primary" type="submit">Create</button>
+</form>
+<div class="filters" id="inv-filters" hx-get="/admin/frag/invoices" hx-target="#inv-table-wrap" hx-swap="innerHTML" hx-trigger="click on button">
+  {% for s in ["", "pending", "seen", "confirmed", "expired", "cancelled"] %}
+  <button class="chip{% if s == status %} active{% endif %}" name="status" value="{{ s }}">{{ s if s else "all" }}</button>
+  {% endfor %}
+</div>
+<div id="inv-table-wrap">
+  {% include "frags/_invoices_table.html" %}
+</div>
+

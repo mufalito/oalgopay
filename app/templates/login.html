@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OalgoPay — Sign in</title>
+<link rel="stylesheet" href="/static/admin.css">
+<script src="/static/htmx.min.js"></script>
+</head>
+<body>
+<div class="login-wrap">
+  <form class="login-card" hx-post="/admin/login" hx-target="#login-error" hx-swap="innerHTML">
+    <div class="brand">OalgoPay</div>
+    <input type="password" name="password" placeholder="admin password" autocomplete="current-password" required>
+    <button type="submit" class="btn primary">Sign in</button>
+    <div class="err" id="login-error"></div>
+  </form>
+</div>
+</body>
+</html>

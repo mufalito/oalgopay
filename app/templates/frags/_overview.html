@@ -1,0 +1,51 @@
+<div class="banner{% if node.ok %} ok{% endif %}">
+  {% if node.ok %}
+    Node OK · height {{ node.height }} · {{ node.peers }} peers{{ " · syncing" if node.syncing else "" }}
+  {% else %}
+    Node degraded: {{ node.error or "unreachable" }} — invoices can still be created; watching resumes automatically.
+  {% endif %}
+</div>
+<div class="cards">
+  <div class="card">
+    <h2>Node</h2>
+    <div class="kv">
+      <div><span class="k">API</span><span class="v {{ 'ok' if node.ok else 'err' }}">{{ "connected" if node.ok else "down" }}</span></div>
+      <div><span class="k">Height</span><span class="v">{{ node.height if node.height is not none else "—" }}</span></div>
+      <div><span class="k">Peers</span><span class="v">{{ node.peers if node.peers is not none else "—" }}</span></div>
+      <div><span class="k">Syncing</span><span class="v">{{ "yes" if node.syncing else "no" }}</span></div>
+      <div><span class="k">Mempool</span><span class="v">{{ node.mempool_size if node.mempool_size is not none else "—" }}</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Wallet</h2>
+    <div class="kv">
+      <div><span class="k">Address</span><span class="v mono" style="font-size:11px">{{ (wallet.address or "")[:28] }}…</span></div>
+      <div><span class="k">State</span><span class="v {{ 'err' if wallet.locked else 'ok' }}">{{ "locked (unlock in GUI)" if wallet.locked else "unlocked" }}</span></div>
+      {% for k, v in fmt_balance(wallet.balance) %}
+      <div><span class="k">{{ k }}</span><span class="v">{{ v }} BNT</span></div>
+      {% endfor %}
+      {% if wallet.error %}<div><span class="k">Error</span><span class="v err">{{ wallet.error }}</span></div>{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <h2>Handle</h2>
+    <div class="kv">
+      {% if handle_info %}
+      <div><span class="k">Handle</span><span class="v">{{ handle_info.handle }}</span></div>
+      <div><span class="k">Verified</span><span class="v {{ 'ok' if handle_info.verified else 'err' }}">{% if handle_info.verified %}✓ signature valid{% else %}unverified ({{ handle_info.error }}){% endif %}</span></div>
+      <div><span class="k">Address</span><span class="v mono" style="font-size:11px">{{ (handle_info.address or "")[:28] }}…</span></div>
+      <div><span class="k">Updated</span><span class="v">{{ fmt_time(handle_info.updated_at) }}</span></div>
+      {% else %}
+      <div><span class="k">Display</span><span class="v">raw address</span></div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <h2>Invoices</h2>
+    <div class="kv">
+      {% for s in ["pending", "seen", "confirmed", "expired", "cancelled"] %}
+      <div><span class="k">{{ s|capitalize }}</span><span class="v">{{ counts[s] }}</span></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>

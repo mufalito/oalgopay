@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OalgoPay — {{ status_code }}</title>
+<link rel="stylesheet" href="/static/pay.css">
+</head>
+<body>
+<main class="pay-card">
+  <header>
+    <div class="brand">OalgoPay</div>
+    <div class="status-badge">{{ status_code }}</div>
+  </header>
+  <h1 style="font-size:22px">Not found</h1>
+  <div class="hint">{{ detail }}</div>
+  <div class="actions"><a class="btn" href="/">Start over</a></div>
+</main>
+</body>
+</html>

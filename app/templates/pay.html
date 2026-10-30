@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OalgoPay — Invoice {{ inv.id }}</title>
+<link rel="stylesheet" href="/static/pay.css">
+<script src="/static/htmx.min.js"></script>
+</head>
+<body>
+<main class="pay-card">
+  <header>
+    <div class="brand">OalgoPay</div>
+    <div class="mono dim" style="font-size:12px">{{ inv.id }}</div>
+  </header>
+
+  <h1><span id="amount">{{ inv.amount_bnt_padded }}</span> <span class="unit">BNT</span></h1>
+  {% if inv.label %}<div class="label">“{{ inv.label }}”</div>{% endif %}
+
+  <div class="row qr-wrap">
+    <img id="qr" src="/pay/{{ inv.id }}/qr.svg" alt="Payment QR code" width="220" height="220">
+    <div class="pay-lines">
+      <div class="line">
+        <span class="k">Pay to</span>
+        <span class="v mono" id="payto" title="{{ inv.address }}">{{ inv.display }}</span>
+        <button class="copy" data-copy="{{ inv.address if not inv.is_handle else inv.display }}">copy</button>
+      </div>
+      <div class="line">
+        <span class="k">Memo</span>
+        <span class="v mono memo">{{ inv.memo }}</span>
+        <button class="copy" data-copy="{{ inv.memo }}">copy</button>
+      </div>
+      <div class="line">
+        <span class="k">Amount</span>
+        <span class="v mono">{{ inv.amount_bnt }} BNT</span>
+        <button class="copy" data-copy="{{ inv.amount_bnt }}">copy</button>
+      </div>
+      <div class="hint">Include the memo exactly — it is how the payment is matched to this invoice.</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <a class="btn primary" id="open-wallet" href="{{ inv.uri }}">Open in Wallet</a>
+    <a class="btn" href="{{ inv.bntpay_url }}" target="_blank" rel="noopener">Open BNTPay page</a>
+  </div>
+
+  {% with inv = sv %}{% include "frags/_pay_status.html" %}{% endwith %}
+</main>
+<script src="/static/pay.js"></script>
+</body>
+</html>

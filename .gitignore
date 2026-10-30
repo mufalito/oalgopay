@@ -1,0 +1,25 @@
+# --- secrets & keys — NEVER commit ---
+config.json
+shop.wallet.dat
+shop.wallet.pw
+*.wallet.dat
+*.wallet.pw
+data/
+
+# --- node binaries (download per docs/INSTALL.md, ~40MB) ---
+bin/*.zip
+bin/blocknet-*
+bin/SHA256SUMS.txt
+
+# --- python ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# --- runtime / editors ---
+*.log
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,9 @@
+{
+  "host": "0.0.0.0",
+  "port": 8096,
+  "api_base": "http://127.0.0.1:18512",
+  "datadir": "/home/hope/DistroBox/ubuntu-ai/paymentgateway/data/blocknet",
+  "admin_password": "CHANGE_ME_admin_password",
+  "api_token": "CHANGE_ME_merchant_api_token",
+  "public_base_url": "http://localhost:8096"
+}
