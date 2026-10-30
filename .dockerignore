@@ -1,0 +1,15 @@
+.git
+.venv
+.ruff_cache
+__pycache__
+data
+bin/blocknet-core-amd64-linux
+bin/*.zip
+bin/SHA256SUMS.txt
+config.json
+shop.wallet.dat
+shop.wallet.pw
+wallets
+docs/img
+*.md
+!bin/README.md

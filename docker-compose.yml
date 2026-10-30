@@ -1,0 +1,29 @@
+name: oalgopay
+
+services:
+  core:
+    build: .
+    image: oalgopay
+    restart: unless-stopped
+    entrypoint: ["/app/bin/blocknet-core-amd64-linux"]
+    command: ["--api", "0.0.0.0:18512", "--data", "/app/data/blocknet"]
+    volumes:
+      - oalgopay-data:/app/data
+      - ./wallets:/wallets
+    ports:
+      - "28080:28080"   # p2p (optional, helps sync/relay)
+    stop_grace_period: 30s
+
+  gateway:
+    image: oalgopay
+    restart: unless-stopped
+    depends_on:
+      - core
+    volumes:
+      - oalgopay-data:/app/data          # shared: api.cookie + chain live here
+      - ./config.json:/app/config.json   # cp config.example.json config.json first
+    ports:
+      - "8096:8096"
+
+volumes:
+  oalgopay-data:

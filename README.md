@@ -55,6 +55,9 @@ Blocknet core (headless) ──api.cookie──▶ watcher (SSE + poll) ──�
    uv run run.py
    ```
 
+   Prefer Docker? `cp config.example.json config.json && docker compose up -d --build`
+   — core + gateway containers, wallet flow included ([docs/DOCKER.md](docs/DOCKER.md)).
+
 2. Open `http://localhost:8096` — the [setup wizard](docs/INSTALL.md) walks
    you through the rest: core address, secrets (generated for you),
    public URL, payment defaults.

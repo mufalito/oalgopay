@@ -54,16 +54,20 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 
 
 def default_config() -> dict[str, Any]:
-    """Sane defaults for first-run setup mode (secrets are placeholders)."""
+    """Sane defaults for first-run setup mode (secrets are placeholders).
+    OALGOPAY_API_BASE / OALGOPAY_DATADIR env vars override the core
+    location (used by the Docker setup, where the core is another container)."""
+    import os
+
     return {
         "host": "0.0.0.0",
         "port": 8096,
-        "api_base": "http://127.0.0.1:18512",
-        "datadir": detect_datadir(),
+        "api_base": os.environ.get("OALGOPAY_API_BASE", "http://127.0.0.1:18512"),
+        "datadir": os.environ.get("OALGOPAY_DATADIR") or detect_datadir(),
         "admin_password": PLACEHOLDER_PREFIX + "_admin_password",
         "api_token": PLACEHOLDER_PREFIX + "_merchant_api_token",
         "public_base_url": "",
-        "data_dir": str(DEFAULT_DATA_DIR),
+        "data_dir": os.environ.get("OALGOPAY_DATA_DIR", str(DEFAULT_DATA_DIR)),
     }
 
 

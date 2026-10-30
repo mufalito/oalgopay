@@ -12,7 +12,7 @@ bin/blocknet-*
 bin/SHA256SUMS.txt
 
 # --- python ---
-.venv/
+wallets/
 __pycache__/
 *.pyc
 .pytest_cache/
