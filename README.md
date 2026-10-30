@@ -62,6 +62,10 @@ Blocknet core (headless) ──api.cookie──▶ watcher (SSE + poll) ──�
 3. Start (or point at) a Blocknet core and load your wallet — the wizard's
    connection test tells you exactly what's missing.
 
+<p align="center">
+  <img src="docs/img/setup-wizard.png" width="420" alt="OalgoPay first-run setup wizard">
+</p>
+
 > **Core binary:** download the daemon-only build that matches your chain
 > data from [blocknetprivacy/core](https://github.com/blocknetprivacy/core)
 > releases (verify against `SHA256SUMS.txt`) — see [bin/README.md](bin/README.md).
