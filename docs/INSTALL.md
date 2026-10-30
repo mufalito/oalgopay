@@ -106,8 +106,9 @@ Description=Blocknet core (OalgoPay)
 After=network-online.target
 
 [Service]
-WorkingDirectory=/home/hope/DistroBox/ubuntu-ai/paymentgateway
-ExecStart=/home/hope/DistroBox/ubuntu-ai/paymentgateway/bin/blocknet-core-amd64-linux --api 127.0.0.1:18512 --data /home/hope/DistroBox/ubuntu-ai/paymentgateway/data/blocknet
+# adjust /opt/oalgopay to wherever you installed OalgoPay
+WorkingDirectory=/opt/oalgopay
+ExecStart=/opt/oalgopay/bin/blocknet-core-amd64-linux --api 127.0.0.1:18512 --data /opt/oalgopay/data/blocknet
 Restart=on-failure
 RestartSec=5
 
@@ -123,8 +124,8 @@ Description=OalgoPay
 After=network-online.target oalgopay-core.service
 
 [Service]
-WorkingDirectory=/home/hope/DistroBox/ubuntu-ai/paymentgateway
-ExecStart=/home/hope/DistroBox/ubuntu-ai/paymentgateway/.venv/bin/python run.py
+WorkingDirectory=/opt/oalgopay
+ExecStart=/opt/oalgopay/.venv/bin/python run.py
 Restart=on-failure
 RestartSec=5
 
