@@ -124,14 +124,6 @@ uv run python -m unittest          # matcher, confirmation sweep, amounts (pure 
 uv run python scripts/e2e_test.py  # real-money end-to-end: pay → seen → confirmed → signed webhooks
 ```
 
-## Credits
-
-- [htmx](https://htmx.org) (BSD-2-Clause) — vendored at `app/static/htmx.min.js`
-- [FastAPI](https://fastapi.tiangolo.com) · [uvicorn](https://www.uvicorn.org) ·
-  [httpx](https://www.python-httpx.org) · [qrcode](https://github.com/lincolnloop/python-qrcode) ·
-  [Jinja2](https://jinja.palletsprojects.com) · [cryptography](https://cryptography.io)
-- Blocknet core: [blocknetprivacy/core](https://github.com/blocknetprivacy/core)
-
 ## License
 
 [MIT](LICENSE)
