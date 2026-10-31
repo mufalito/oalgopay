@@ -5,9 +5,14 @@
   <input name="expires_in_min" placeholder="expiry min" inputmode="numeric" class="input w-28">
   <button class="btn btn-primary" type="submit">Create</button>
 </form>
-<div class="mb-4 flex flex-wrap gap-2" id="inv-filters" hx-get="/admin/frag/invoices" hx-target="#inv-table-wrap" hx-swap="innerHTML" hx-trigger="click on button">
+<div class="mb-4 flex flex-wrap gap-2" id="inv-filters">
   {% for s in ["", "pending", "seen", "confirmed", "expired", "cancelled"] %}
-  <button class="chip{% if s == status %} chip-active{% endif %}" name="status" value="{{ s }}">{{ s if s else "all" }}</button>
+  <button class="chip{% if s == status %} chip-active{% endif %}"
+          hx-get="/admin/frag/invoices-table{% if s %}?status={{ s }}{% endif %}"
+          hx-target="#inv-table-wrap" hx-swap="innerHTML"
+          onclick="[...this.parentElement.children].forEach(b => b.classList.remove('chip-active')); this.classList.add('chip-active')">
+    {{ s if s else "all" }}
+  </button>
   {% endfor %}
 </div>
 <div id="inv-table-wrap">

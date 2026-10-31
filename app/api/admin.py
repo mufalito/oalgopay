@@ -180,6 +180,14 @@ async def frag_invoices(request: Request, status: str = "", limit: int = 50):
     return frag(request, "frags/_invoices.html", {"invoices": rows, "status": status})
 
 
+@router.get("/admin/frag/invoices-table", response_class=HTMLResponse, include_in_schema=False)
+async def frag_invoices_table(request: Request, status: str = "", limit: int = 50):
+    """Table-only variant used by the filter chips (swaps just #inv-table-wrap)."""
+    require_admin(request)
+    rows = db.list_invoices(status=status or None, limit=max(1, min(limit, 200)))
+    return frag(request, "frags/_invoices_table.html", {"invoices": rows})
+
+
 @router.get("/admin/frag/invoice/{inv_id}", response_class=HTMLResponse)
 async def frag_invoice(request: Request, inv_id: str):
     require_admin(request)
