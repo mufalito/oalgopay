@@ -4,6 +4,6 @@
   "api_base": "http://127.0.0.1:18512",
   "datadir": "/opt/oalgopay/data/blocknet",
   "admin_password": "CHANGE_ME_admin_password",
-  "api_token": "CHANGE_ME_merchant_api_token",
+  "payout_api_key": "",
   "public_base_url": "http://localhost:8096"
 }

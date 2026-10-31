@@ -43,6 +43,7 @@ Blocknet core (headless) ──api.cookie──▶ watcher (SSE + poll) ──�
 | **Webhooks** | `payment.seen`, `invoice.confirmed`, `invoice.expired` (+ manual resend, test pings); `event_id` for dedupe, `previous_status` for transitions; HMAC-SHA256 signatures with timestamp binding; retries 30 s → 2 h |
 | **Admin panel** | node/wallet/handle health, invoice CRUD + manual confirm, webhook management + delivery log, manual payouts with audit trail, live settings |
 | **Setup wizard** | first run at `/setup`: detects your core, live-tests the connection, generates secrets — no config editing required |
+| **Payouts API** | separate `payout_api_key` + `POST /api/v1/payouts` with client idempotency keys — retry-safe automation that can never double-pay |
 | **API docs** | OpenAPI at `/docs` + `/redoc`, typed schemas, working Authorize button |
 | **Self-contained** | one directory: app, core binary, chain data, wallet. Nothing phones home. |
 

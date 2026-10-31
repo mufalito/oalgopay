@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config as config_mod
 from . import db, watcher, webhooks
-from .api import admin, merchant, pay, setup
+from .api import admin, merchant, pay, payouts, setup
 from .blocknet import BlocknetClient
 
 logging.basicConfig(
@@ -72,6 +72,7 @@ def create_app(cfg: dict) -> FastAPI:
 
     app.include_router(merchant.router)
     app.include_router(pay.router)
+    app.include_router(payouts.router)
     app.include_router(admin.router)
     app.include_router(setup.router)
 

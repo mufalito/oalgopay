@@ -66,6 +66,7 @@ def default_config() -> dict[str, Any]:
         "datadir": os.environ.get("OALGOPAY_DATADIR") or detect_datadir(),
         "admin_password": PLACEHOLDER_PREFIX + "_admin_password",
         "api_token": PLACEHOLDER_PREFIX + "_merchant_api_token",
+        "payout_api_key": "",
         "public_base_url": "",
         "data_dir": os.environ.get("OALGOPAY_DATA_DIR", str(DEFAULT_DATA_DIR)),
     }

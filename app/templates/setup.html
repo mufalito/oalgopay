@@ -35,8 +35,14 @@
         <label class="block text-sm text-slate-600">Admin password (min 8 chars)
           <input name="admin_password" id="pw" type="text" value="{{ suggest_pw }}" autocomplete="off" required class="input mt-1">
         </label>
-        <label class="block text-sm text-slate-600">Merchant API token (min 16 chars)
+        <label class="block text-sm text-slate-600">Merchant API token (min 16 chars — invoice creation)
           <input name="api_token" id="tok" type="text" value="{{ suggest_token }}" autocomplete="off" required class="input mt-1">
+        </label>
+        <label class="block text-sm text-slate-600">Payouts API key (optional — automated payouts via /api/v1/payouts; blank = disabled)
+          <div class="mt-1 flex gap-2">
+            <input name="payout_api_key" id="pkey" type="text" autocomplete="off" class="input">
+            <button type="button" class="btn" onclick="document.getElementById('pkey').value = crypto.getRandomValues(new Uint8Array(24)).reduce((s,b) => s + b.toString(16).padStart(2,'0'), '')">Generate</button>
+          </div>
         </label>
         <button type="button" class="btn" onclick="regen()">Regenerate both</button>
       </div>

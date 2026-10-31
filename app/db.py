@@ -319,3 +319,7 @@ def insert_payout(p: dict[str, Any]) -> None:
 
 def list_payouts(limit: int = 25) -> list[dict[str, Any]]:
     return query_all("SELECT * FROM payouts ORDER BY id DESC LIMIT ?", (limit,))
+
+
+def get_payout_by_key(idempotency_key: str) -> dict[str, Any] | None:
+    return query_one("SELECT * FROM payouts WHERE idempotency_key = ?", (idempotency_key,))

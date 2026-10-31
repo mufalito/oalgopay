@@ -162,3 +162,20 @@ class PayoutOut(BaseModel):
     txid: str | None
     fee_atomic: int | None
     error: str | None
+
+
+class PayoutCreateRequest(SendRequest):
+    """Automated payout. idempotency_key: supply your own to make retries
+    safe — a replay with the same key returns the original result instead
+    of sending twice."""
+
+    idempotency_key: str | None = Field(
+        default=None, min_length=8, max_length=100,
+        description="client-chosen key; replays return the stored result",
+    )
+
+
+class PayoutCreatedOut(SendResult):
+    id: int
+    idempotency_key: str
+    replayed: bool = Field(description="true when an existing payout was returned (no new send)")

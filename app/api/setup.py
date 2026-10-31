@@ -118,7 +118,7 @@ async def setup_submit(request: Request):
     if not _setup_mode(request):
         raise HTTPException(status_code=409, detail="setup already completed")
     params = await _body(request)
-
+    payout_api_key = str(params.get("payout_api_key", "")).strip()
     errors: list[str] = []
     admin_password = str(params.get("admin_password", "")).strip()
     api_token = str(params.get("api_token", "")).strip()
@@ -167,7 +167,7 @@ async def setup_submit(request: Request):
         "datadir": datadir,
         "admin_password": admin_password,
         "api_token": api_token,
-        "public_base_url": public_base_url or str(request.base_url).rstrip("/"),
+        "payout_api_key": payout_api_key,
     })
     cfg_path = config_mod.DEFAULT_CONFIG_PATH
     cfg_path.write_text(json.dumps(cfg, indent=2) + "\n")

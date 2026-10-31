@@ -163,3 +163,31 @@ curl -s -c jar -X POST localhost:8096/admin/login \
 
 Everything else in the panel is htmx fragments (`/admin/frag/*`) — drive
 those in a browser, or read `app/api/admin.py`.
+
+## Payouts API — automated payouts
+
+Separate credential on purpose: `Authorization: Bearer <payout_api_key>`
+(`payout_api_key` in `config.json`; blank = the whole surface returns 403).
+Apps that create invoices with `api_token` **cannot** move coins.
+
+```bash
+PK=…   # payout_api_key
+
+# pay out — supply idempotency_key so retries can never double-pay
+curl -s -X POST localhost:8096/api/v1/payouts \
+  -H "Authorization: Bearer $PK" -H 'Content-Type: application/json' \
+  -d '{"address":"ULP…","amount_bnt":"1.25","memo":"withdrawal #77",
+       "idempotency_key":"withdraw-77"}'
+# → 201 {"txid": "…", "amount_atomic": 125000000, "fee_atomic": …,
+#         "idempotency_key": "withdraw-77", "replayed": false}
+
+# replaying the SAME idempotency_key returns the original payout
+# (replayed: true) without sending again.
+
+curl -s -H "Authorization: Bearer $PK" localhost:8096/api/v1/payouts?limit=25   # history
+curl -s -H "Authorization: Bearer $PK" localhost:8096/api/v1/payouts/4          # one payout
+```
+
+Every attempt is recorded in the payouts audit log (rejected attempts keep
+the core's error). A memo containing an `INV-…` id sent to this gateway's
+own address credits that invoice as paid — use memos deliberately.
