@@ -15,6 +15,34 @@
   </button>
   {% endfor %}
 </div>
+
+<div id="inv-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4"
+     onclick="if (event.target === this) closeInvModal()">
+  <div class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
+    <div id="inv-detail"></div>
+  </div>
+</div>
+<script>
+(function () {
+  if (window.__invModalInit) return;
+  window.__invModalInit = true;
+  window.closeInvModal = function () {
+    var m = document.getElementById("inv-modal");
+    if (!m) return;
+    m.classList.add("hidden"); m.classList.remove("flex");
+    document.getElementById("inv-detail").innerHTML = "";
+  };
+  document.addEventListener("htmx:afterSwap", function (e) {
+    if (e.target.id === "inv-detail" && e.target.innerHTML.trim()) {
+      var m = document.getElementById("inv-modal");
+      m.classList.remove("hidden"); m.classList.add("flex");
+    }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") window.closeInvModal();
+  });
+})();
+</script>
 <div id="inv-table-wrap">
   {% include "frags/_invoices_table.html" %}
 </div>

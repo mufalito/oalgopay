@@ -7,7 +7,7 @@
     <button class="btn" hx-post="/admin/frag/invoice/{{ inv.id }}/confirm" hx-target="#invoice-detail-card" hx-swap="outerHTML">Confirm (manual)</button>
     {% endif %}
     <button class="btn" hx-post="/admin/frag/invoice/{{ inv.id }}/resend" hx-target="#invoice-detail-card" hx-swap="outerHTML">Resend webhooks</button>
-    <button class="btn" onclick="document.getElementById('inv-detail').innerHTML=''">Close</button>
+    <button class="btn" onclick="closeInvModal()">Close</button>
   </div>
   <pre class="overflow-x-auto rounded-md border border-slate-100 bg-slate-50 p-4 font-mono text-xs leading-relaxed text-slate-600">{% for k in ["id", "status", "amount_bnt", "paid_bnt", "memo", "label", "created_at", "expires_at", "confirmations_required", "late_payment", "overpaid"] %}{{ k }}: {{ inv[k] }}
 {% endfor %}{% if inv.payments %}payments:
