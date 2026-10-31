@@ -184,6 +184,12 @@ async def setup_submit(request: Request):
     if webhook_url:
         db.create_webhook_endpoint(webhook_url, pysecrets.token_hex(32))
 
+    # seed the new credentials into the revocable api_keys table
+    from ..main import _seed_api_keys
+
+    db.set_setting("api_keys_seeded", "")  # force re-seed with the real values
+    _seed_api_keys(cfg)
+
     wallet_note = ""
     wallet_failed = False
     if wallet_path and wallet_password:
