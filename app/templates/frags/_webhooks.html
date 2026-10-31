@@ -1,6 +1,6 @@
-<form class="inline-form" hx-post="/admin/frag/webhook" hx-target="#wh-wrap" hx-swap="innerHTML">
-  <input name="url" placeholder="https://example.com/hooks/oalgopay" style="flex:2" required>
-  <button class="btn primary" type="submit">Add endpoint</button>
+<form class="mb-4 flex flex-wrap gap-2" hx-post="/admin/frag/webhook" hx-target="#wh-wrap" hx-swap="innerHTML">
+  <input name="url" placeholder="https://example.com/hooks/oalgopay" required class="input flex-1">
+  <button class="btn btn-primary" type="submit">Add endpoint</button>
 </form>
 <div id="wh-wrap">
   {% include "frags/_webhooks_body.html" %}

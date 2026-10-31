@@ -4,44 +4,45 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OalgoPay — Invoice {{ inv.id }}</title>
-<link rel="stylesheet" href="/static/pay.css">
+<link rel="stylesheet" href="/static/tailwind.css">
 <script src="/static/htmx.min.js"></script>
 </head>
-<body>
-<main class="pay-card">
-  <header>
-    <div class="brand">OalgoPay</div>
-    <div class="mono dim" style="font-size:12px">{{ inv.id }}</div>
+<body class="flex min-h-screen justify-center bg-slate-50 px-4 py-10 text-slate-800">
+<main class="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-7 shadow-sm" data-invoice="{{ inv.id }}">
+  <header class="mb-2 flex items-center justify-between">
+    <div class="text-base font-semibold tracking-wide text-brand-700">OalgoPay</div>
+    <div class="font-mono text-xs text-slate-400">{{ inv.id }}</div>
   </header>
 
-  <h1><span id="amount">{{ inv.amount_bnt_padded }}</span> <span class="unit">BNT</span></h1>
-  {% if inv.label %}<div class="label">“{{ inv.label }}”</div>{% endif %}
+  <h1 class="mb-1 font-mono text-4xl font-semibold tracking-tight text-slate-900">{{ inv.amount_bnt_padded }} <span class="text-base font-normal text-slate-400">BNT</span></h1>
+  {% if inv.label %}<div class="mb-5 text-sm text-slate-500">“{{ inv.label }}”</div>{% else %}<div class="mb-5"></div>{% endif %}
 
-  <div class="row qr-wrap">
-    <img id="qr" src="/pay/{{ inv.id }}/qr.svg" alt="Payment QR code" width="220" height="220">
-    <div class="pay-lines">
-      <div class="line">
-        <span class="k">Pay to</span>
-        <span class="v mono" id="payto" title="{{ inv.address }}">{{ inv.display }}</span>
-        <button class="copy" data-copy="{{ inv.address if not inv.is_handle else inv.display }}">copy</button>
+  <div class="mb-6 flex flex-wrap items-center gap-6">
+    <img id="qr" src="/pay/{{ inv.id }}/qr.svg" alt="Payment QR code" width="208" height="208"
+         class="shrink-0 rounded-lg border border-slate-200 bg-white p-2">
+    <div class="min-w-[16rem] flex-1 space-y-2 text-sm">
+      <div class="flex items-center gap-2">
+        <span class="klabel w-20 shrink-0">Pay to</span>
+        <span class="flex-1 truncate font-mono text-slate-700" title="{{ inv.address }}">{{ inv.display }}</span>
+        <button class="copy-btn" data-copy="{{ inv.address if not inv.is_handle else inv.display }}">copy</button>
       </div>
-      <div class="line">
-        <span class="k">Memo</span>
-        <span class="v mono memo">{{ inv.memo }}</span>
-        <button class="copy" data-copy="{{ inv.memo }}">copy</button>
+      <div class="flex items-center gap-2">
+        <span class="klabel w-20 shrink-0">Memo</span>
+        <span class="flex-1 truncate font-mono font-semibold text-mint-700">{{ inv.memo }}</span>
+        <button class="copy-btn" data-copy="{{ inv.memo }}">copy</button>
       </div>
-      <div class="line">
-        <span class="k">Amount</span>
-        <span class="v mono">{{ inv.amount_bnt }} BNT</span>
-        <button class="copy" data-copy="{{ inv.amount_bnt }}">copy</button>
+      <div class="flex items-center gap-2">
+        <span class="klabel w-20 shrink-0">Amount</span>
+        <span class="flex-1 font-mono text-slate-700">{{ inv.amount_bnt }} BNT</span>
+        <button class="copy-btn" data-copy="{{ inv.amount_bnt }}">copy</button>
       </div>
-      <div class="hint">Include the memo exactly — it is how the payment is matched to this invoice.</div>
+      <p class="pt-1 text-xs leading-relaxed text-slate-400">Include the memo exactly — it is how the payment is matched to this invoice.</p>
     </div>
   </div>
 
-  <div class="actions">
-    <a class="btn primary" id="open-wallet" href="{{ inv.uri }}">Open in Wallet</a>
-    <a class="btn" href="{{ inv.bntpay_url }}" target="_blank" rel="noopener">Open BNTPay page</a>
+  <div class="mb-6 flex flex-wrap gap-3">
+    <a class="btn btn-primary flex-1" id="open-wallet" href="{{ inv.uri }}">Open in Wallet</a>
+    <a class="btn flex-1" href="{{ inv.bntpay_url }}" target="_blank" rel="noopener">Open BNTPay page</a>
   </div>
 
   {% with inv = sv %}{% include "frags/_pay_status.html" %}{% endwith %}

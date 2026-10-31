@@ -1,18 +1,30 @@
-<table id="inv-table">
-  <thead><tr><th>ID</th><th>Amount</th><th>Paid</th><th>Status</th><th>Created</th><th>Expires</th></tr></thead>
+<div class="overflow-x-auto rounded-lg border border-slate-200">
+<table id="inv-table" class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+      <th class="px-4 py-2.5 font-medium">ID</th>
+      <th class="px-4 py-2.5 font-medium">Amount</th>
+      <th class="px-4 py-2.5 font-medium">Paid</th>
+      <th class="px-4 py-2.5 font-medium">Status</th>
+      <th class="px-4 py-2.5 font-medium">Created</th>
+      <th class="px-4 py-2.5 font-medium">Expires</th>
+    </tr>
+  </thead>
   <tbody>
     {% for i in invoices %}
-    <tr class="clickable" hx-get="/admin/frag/invoice/{{ i.id }}" hx-target="#inv-detail" hx-swap="innerHTML">
-      <td class="mono">{{ i.id }}</td>
-      <td>{{ fmt_bnt(i.amount_atomic) }}</td>
-      <td>{{ fmt_bnt(i.paid_atomic) }}</td>
-      <td><span class="status-chip {{ i.status }}">{{ i.status }}</span></td>
-      <td>{{ fmt_time(i.created_at) }}</td>
-      <td>{{ fmt_time(i.expires_at) }}</td>
+    <tr class="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-brand-50/50"
+        hx-get="/admin/frag/invoice/{{ i.id }}" hx-target="#inv-detail" hx-swap="innerHTML">
+      <td class="px-4 py-2.5 font-mono text-xs text-brand-700">{{ i.id }}</td>
+      <td class="px-4 py-2.5 font-mono">{{ fmt_bnt(i.amount_atomic) }}</td>
+      <td class="px-4 py-2.5 font-mono text-slate-500">{{ fmt_bnt(i.paid_atomic) }}</td>
+      <td class="px-4 py-2.5"><span class="status-badge" data-status="{{ i.status }}">{{ i.status }}</span></td>
+      <td class="px-4 py-2.5 text-slate-500">{{ fmt_time(i.created_at) }}</td>
+      <td class="px-4 py-2.5 text-slate-500">{{ fmt_time(i.expires_at) }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="6" style="color:var(--muted)">no invoices</td></tr>
+    <tr><td colspan="6" class="px-4 py-6 text-center text-slate-400">no invoices</td></tr>
     {% endfor %}
   </tbody>
 </table>
-<div id="inv-detail">{% if inv %}{% include "frags/_invoice_detail.html" %}{% endif %}</div>
+</div>
+<div id="inv-detail" class="mt-4"></div>

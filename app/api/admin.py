@@ -85,7 +85,7 @@ async def login(request: Request, response: Response):
     if not hmac.compare_digest(password, request.app.state.config["admin_password"]):
         if request.headers.get("HX-Request"):
             return HTMLResponse(
-                '<div class="err" id="login-error">wrong password</div>', status_code=200
+                '<div class="text-sm text-peach-700" id="login-error">wrong password</div>', status_code=200
             )
         raise HTTPException(status_code=401, detail="wrong password")
     token = make_session_token(request.app.state.session_secret)
@@ -295,10 +295,10 @@ async def frag_create_webhook(request: Request):
     params = await body_params(request)
     url = str(params.get("url", ""))
     if not url.startswith(("http://", "https://")):
-        return HTMLResponse('<div class="err">url must be an http(s) URL</div>', status_code=422)
+        return HTMLResponse('<div class="banner-err">url must be an http(s) URL</div>', status_code=422)
     secret = secrets.token_hex(32)
     db.create_webhook_endpoint(url, secret)
-    note = f'<div class="secret-note">Endpoint signing secret (shown once): <b>{secret}</b></div>'
+    note = f'<div class="banner-warn mb-4 break-all">Endpoint signing secret (shown once): <b class="font-mono">{secret}</b></div>'
     return HTMLResponse(
         note + templates.env.get_template("frags/_webhooks.html").render(**_webhooks_ctx())
     )
@@ -381,13 +381,13 @@ async def frag_wallet_load(request: Request):
     if not path or not password:
         overview_html = (await frag_overview(request)).body.decode("utf-8")
         return HTMLResponse(
-            '<div class="banner">Wallet file and password are both required.</div>' + overview_html
+            '<div class="banner-warn">Wallet file and password are both required.</div>' + overview_html
         )
     try:
         result = await request.app.state.client.wallet_load(path, password)
-        banner = f'<div class="banner ok">Wallet {result} — payments are being watched again.</div>'
+        banner = f'<div class="banner-ok">Wallet {result} — payments are being watched again.</div>'
     except BlocknetError as exc:
-        banner = f'<div class="banner">Wallet not loaded: {exc}</div>'
+        banner = f'<div class="banner-err">Wallet not loaded: {exc}</div>'
     overview_html = (await frag_overview(request)).body.decode("utf-8")
     return HTMLResponse(banner + overview_html)
 

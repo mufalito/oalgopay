@@ -2,7 +2,7 @@
  * server-rendered _pay_status.html fragment driven by htmx. */
 (function () {
   "use strict";
-  document.querySelectorAll(".copy").forEach(function (btn) {
+  document.querySelectorAll(".copy-btn").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var text = btn.dataset.copy;
       function done() {

@@ -207,12 +207,12 @@ async def setup_submit(request: Request):
     if wallet_failed:
         # stay on the page so the message is actually read; setup itself is done
         return HTMLResponse(
-            f'<div class="banner">Setup complete — {wallet_note}{bind_note}'
-            f'The admin panel is at <a href="/admin">/admin</a> '
+            f'<div class="banner-warn">Setup complete — {wallet_note}{bind_note}'
+            f'The admin panel is at <a class="text-brand-700 underline" href="/admin">/admin</a> '
             f'(password you set above).</div>'
         )
     resp = HTMLResponse(
-        f'<div class="banner ok">Setup complete — {wallet_note}{bind_note}opening the admin panel…</div>'
+        f'<div class="banner-ok">Setup complete — {wallet_note}{bind_note}opening the admin panel…</div>'
     )
     resp.headers["HX-Redirect"] = "/admin"
     return resp

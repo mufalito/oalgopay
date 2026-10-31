@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OalgoPay — {{ status_code }}</title>
-<link rel="stylesheet" href="/static/pay.css">
+<link rel="stylesheet" href="/static/tailwind.css">
 </head>
-<body>
-<main class="pay-card">
-  <header>
-    <div class="brand">OalgoPay</div>
-    <div class="status-badge">{{ status_code }}</div>
+<body class="flex min-h-screen justify-center bg-slate-50 px-4 py-10 text-slate-800">
+<main class="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-7 shadow-sm">
+  <header class="mb-4 flex items-center justify-between">
+    <div class="text-base font-semibold tracking-wide text-brand-700">OalgoPay</div>
+    <div class="status-badge" data-status="cancelled">{{ status_code }}</div>
   </header>
-  <h1 style="font-size:22px">Not found</h1>
-  <div class="hint">{{ detail }}</div>
-  <div class="actions"><a class="btn" href="/">Start over</a></div>
+  <h1 class="text-lg font-semibold text-slate-800">Not found</h1>
+  <p class="mt-1 text-sm text-slate-500">{{ detail }}</p>
+  <div class="mt-5"><a class="btn" href="/">Start over</a></div>
 </main>
 </body>
 </html>

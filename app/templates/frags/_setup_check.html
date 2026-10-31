@@ -1,8 +1,11 @@
 {% if rows %}
-<div class="banner" style="border-color:var(--border);color:var(--fg);">
-  <div class="kv">
+<div class="banner-warn">
+  <div>
     {% for r in rows %}
-    <div><span class="k">{{ r.k }}</span><span class="v {{ 'ok' if r.ok else 'err' }}">{% if r.ok %}✓{% else %}✗{% endif %} {{ r.v }}</span></div>
+    <div class="flex items-baseline justify-between gap-3 py-0.5 text-sm">
+      <span class="klabel">{{ r.k }}</span>
+      <span class="{{ 'text-mint-700' if r.ok else 'text-peach-700' }}">{% if r.ok %}✓{% else %}✗{% endif %} {{ r.v }}</span>
+    </div>
     {% endfor %}
   </div>
 </div>

@@ -1,41 +1,53 @@
-{% if error %}<div class="banner">{{ error }}</div>{% endif %}
+{% if error %}<div class="banner-err mb-4">{{ error }}</div>{% endif %}
 {% if result %}
-<div class="banner ok">
+<div class="banner-ok mb-4">
   Sent {{ fmt_bnt(result.amount_atomic) }} BNT to {{ result.address[:20] }}…<br>
-  txid <span class="mono">{{ result.txid }}</span>{% if result.fee_atomic %} · fee {{ fmt_bnt(result.fee_atomic) }} BNT{% endif %}
+  txid <span class="font-mono">{{ result.txid }}</span>{% if result.fee_atomic %} · fee {{ fmt_bnt(result.fee_atomic) }} BNT{% endif %}
 </div>
 {% endif %}
 <div id="send-frag">
-  <form class="inline-form" hx-post="/admin/frag/send" hx-target="#view-send" hx-swap="innerHTML"
+  <form class="mb-2 flex flex-wrap gap-2" hx-post="/admin/frag/send" hx-target="#view-send" hx-swap="innerHTML"
         hx-confirm="Send funds now? This spends real BNT."
         hx-disabled-elt="find button">
-    <input name="address" placeholder="recipient address (ULP…)" style="flex:2" required>
-    <input name="amount_bnt" placeholder="amount (BNT)" inputmode="decimal" required>
-    <input name="memo" placeholder="memo (optional)">
-    <button class="btn primary" type="submit">Send</button>
+    <input name="address" placeholder="recipient address (ULP…)" required class="input flex-[2_1_16rem]">
+    <input name="amount_bnt" placeholder="amount (BNT)" inputmode="decimal" required class="input w-32">
+    <input name="memo" placeholder="memo (optional)" class="input flex-1">
+    <button class="btn btn-primary" type="submit">Send</button>
   </form>
-  <div class="hint" style="margin:8px 0 16px">
-    Every send uses a fresh daemon idempotency key and is recorded below.
-    A memo containing an <span class="mono">INV-…</span> id sent to this
+  <p class="mb-6 text-xs leading-relaxed text-slate-400">
+    Every send uses a fresh core idempotency key and is recorded below.
+    A memo containing an <span class="font-mono">INV-…</span> id sent to this
     gateway's own address will credit that invoice as paid.
-  </div>
-  <h2>Recent sends</h2>
-  <table>
-    <thead><tr><th>#</th><th>When</th><th>Address</th><th>Amount</th><th>Fee</th><th>Memo</th><th>Txid</th></tr></thead>
+  </p>
+  <h2 class="klabel mb-3">Recent sends</h2>
+  <div class="overflow-x-auto rounded-lg border border-slate-200">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+        <th class="px-4 py-2.5 font-medium">#</th>
+        <th class="px-4 py-2.5 font-medium">When</th>
+        <th class="px-4 py-2.5 font-medium">Address</th>
+        <th class="px-4 py-2.5 font-medium">Amount</th>
+        <th class="px-4 py-2.5 font-medium">Fee</th>
+        <th class="px-4 py-2.5 font-medium">Memo</th>
+        <th class="px-4 py-2.5 font-medium">Txid</th>
+      </tr>
+    </thead>
     <tbody>
       {% for p in payouts %}
-      <tr>
-        <td>{{ p.id }}</td>
-        <td>{{ fmt_time(p.created_at) }}</td>
-        <td class="mono" title="{{ p.address }}">{{ p.address[:16] }}…</td>
-        <td>{{ fmt_bnt(p.amount_atomic) }}</td>
-        <td>{% if p.fee_atomic %}{{ fmt_bnt(p.fee_atomic) }}{% else %}—{% endif %}</td>
-        <td>{{ p.memo or "—" }}</td>
-        <td>{% if p.txid %}<span class="mono" title="{{ p.txid }}">{{ p.txid[:14] }}…</span>{% else %}<span class="err">{{ p.error or "pending" }}</span>{% endif %}</td>
+      <tr class="border-b border-slate-100 last:border-0">
+        <td class="px-4 py-2.5">{{ p.id }}</td>
+        <td class="px-4 py-2.5 text-slate-500">{{ fmt_time(p.created_at) }}</td>
+        <td class="px-4 py-2.5 font-mono text-xs text-slate-600" title="{{ p.address }}">{{ p.address[:16] }}…</td>
+        <td class="px-4 py-2.5 font-mono">{{ fmt_bnt(p.amount_atomic) }}</td>
+        <td class="px-4 py-2.5 font-mono text-slate-500">{% if p.fee_atomic %}{{ fmt_bnt(p.fee_atomic) }}{% else %}—{% endif %}</td>
+        <td class="px-4 py-2.5 text-slate-500">{{ p.memo or "—" }}</td>
+        <td class="px-4 py-2.5">{% if p.txid %}<span class="font-mono text-xs text-brand-700" title="{{ p.txid }}">{{ p.txid[:14] }}…</span>{% else %}<span class="text-peach-700">{{ p.error or "pending" }}</span>{% endif %}</td>
       </tr>
       {% else %}
-      <tr><td colspan="7" style="color:var(--muted)">no sends yet</td></tr>
+      <tr><td colspan="7" class="px-4 py-6 text-center text-slate-400">no sends yet</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>

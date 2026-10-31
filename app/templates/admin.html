@@ -4,28 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OalgoPay — Admin</title>
-<link rel="stylesheet" href="/static/admin.css">
+<link rel="stylesheet" href="/static/tailwind.css">
 <script src="/static/htmx.min.js"></script>
 </head>
-<body>
-<nav>
-  <div class="brand">OalgoPay</div>
-  <div class="nav-links">
-    <a href="#overview" data-view="overview">Overview</a>
-    <a href="#invoices" data-view="invoices">Invoices</a>
-    <a href="#webhooks" data-view="webhooks">Webhooks</a>
-    <a href="#send" data-view="send">Send</a>
-    <a href="/docs" target="_blank" rel="noopener" class="ext">API Docs ↗</a>
-    <a href="#settings" data-view="settings">Settings</a>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+<nav class="border-b border-slate-200 bg-white">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
+    <div class="text-base font-semibold tracking-wide text-slate-800">OalgoPay <span class="font-normal text-slate-400">gateway</span></div>
+    <div class="nav-links flex flex-wrap items-center gap-1">
+      <a href="#overview" data-view="overview" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Overview</a>
+      <a href="#invoices" data-view="invoices" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Invoices</a>
+      <a href="#webhooks" data-view="webhooks" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Webhooks</a>
+      <a href="#send" data-view="send" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Send</a>
+      <a href="/docs" target="_blank" rel="noopener" class="rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-brand-700">API Docs ↗</a>
+      <a href="#settings" data-view="settings" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Settings</a>
+    </div>
+    <button id="logout" hx-post="/admin/logout" class="ml-auto text-sm text-slate-400 hover:text-peach-700">logout</button>
   </div>
 </nav>
 
-<main>
-  <section id="view-overview" class="view"><h1>Overview</h1></section>
-  <section id="view-invoices" class="view"><h1>Invoices</h1></section>
-  <section id="view-webhooks" class="view"><h1>Webhooks</h1></section>
-  <section id="view-send" class="view"><h1>Send</h1></section>
-  <section id="view-settings" class="view"><h1>Settings</h1></section>
+<main class="mx-auto max-w-6xl px-6 py-8">
+  <section id="view-overview" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Overview</h1></section>
+  <section id="view-invoices" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Invoices</h1></section>
+  <section id="view-webhooks" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Webhooks</h1></section>
+  <section id="view-send" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Send</h1></section>
+  <section id="view-settings" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Settings</h1></section>
 </main>
 
 <script>
@@ -39,11 +42,14 @@
     settings: "/admin/frag/settings",
   };
   function setView(name) {
-    document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+    document.querySelectorAll(".view").forEach(function (v) { v.classList.add("hidden"); });
     var view = document.getElementById("view-" + name);
-    if (view) view.classList.add("active");
-    document.querySelectorAll(".nav-links a").forEach(function (a) {
-      a.classList.toggle("active", a.dataset.view === name);
+    if (view) view.classList.remove("hidden");
+    document.querySelectorAll(".nav-links a[data-view]").forEach(function (a) {
+      var on = a.dataset.view === name;
+      a.classList.toggle("bg-brand-50", on);
+      a.classList.toggle("text-brand-700", on);
+      a.classList.toggle("text-slate-500", !on);
     });
   }
   function load(name) {

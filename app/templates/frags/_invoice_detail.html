@@ -1,7 +1,7 @@
-<div class="detail" id="invoice-detail-card">
-  <div class="row-actions">
+<div class="card" id="invoice-detail-card">
+  <div class="mb-4 flex flex-wrap gap-2">
     {% if inv.status in ("pending", "seen") %}
-    <button class="btn danger" hx-post="/admin/frag/invoice/{{ inv.id }}/cancel" hx-target="#invoice-detail-card" hx-swap="outerHTML">Cancel</button>
+    <button class="btn btn-danger" hx-post="/admin/frag/invoice/{{ inv.id }}/cancel" hx-target="#invoice-detail-card" hx-swap="outerHTML">Cancel</button>
     {% endif %}
     {% if inv.status not in ("confirmed", "cancelled") %}
     <button class="btn" hx-post="/admin/frag/invoice/{{ inv.id }}/confirm" hx-target="#invoice-detail-card" hx-swap="outerHTML">Confirm (manual)</button>
@@ -9,7 +9,7 @@
     <button class="btn" hx-post="/admin/frag/invoice/{{ inv.id }}/resend" hx-target="#invoice-detail-card" hx-swap="outerHTML">Resend webhooks</button>
     <button class="btn" onclick="document.getElementById('inv-detail').innerHTML=''">Close</button>
   </div>
-  <pre>{% for k in ["id", "status", "amount_bnt", "paid_bnt", "memo", "label", "created_at", "expires_at", "confirmations_required", "late_payment", "overpaid", "uri", "bntpay_url", "pay_url"] %}{{ k }}: {{ inv[k] }}
+  <pre class="overflow-x-auto rounded-md border border-slate-100 bg-slate-50 p-4 font-mono text-xs leading-relaxed text-slate-600">{% for k in ["id", "status", "amount_bnt", "paid_bnt", "memo", "label", "created_at", "expires_at", "confirmations_required", "late_payment", "overpaid"] %}{{ k }}: {{ inv[k] }}
 {% endfor %}{% if inv.payments %}payments:
 {% for p in inv.payments %}  - txid={{ p.txid }} index={{ p.output_index }} amount={{ p.amount_bnt }} height={{ p.block_height }} conf={{ p.confirmations }} method={{ p.match_method }}
 {% endfor %}{% endif %}{% if inv.deliveries %}webhook deliveries:

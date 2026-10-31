@@ -3,28 +3,30 @@
      hx-get="/pay/{{ inv.id }}/status-frag" hx-trigger="every 5s" hx-swap="outerHTML"
      {% endif %}
      data-expires="{{ inv.expires_at }}">
-  <div class="meta">
-    <div class="line">
-      <span class="k">Status</span>
-      <span class="v"><span class="status-badge" data-status="{{ inv.status }}">{{ inv.status }}</span></span>
-    </div>
-    <div class="line">
-      <span class="k">Received</span>
-      <span class="v mono">{{ inv.paid_bnt }} BNT</span>
-    </div>
-    <div class="line">
-      <span class="k">Confirmations</span>
-      <span class="v mono">{{ inv.confirmations }} / {{ inv.confirmations_required }}</span>
-    </div>
-    <div class="line">
-      <span class="k">Expires</span>
-      <span class="v mono" id="countdown">—</span>
+  <div class="border-t border-slate-100 pt-4">
+    <div class="space-y-1.5 text-sm">
+      <div class="flex items-baseline justify-between gap-3">
+        <span class="klabel">Status</span>
+        <span class="status-badge" data-status="{{ inv.status }}">{{ inv.status }}</span>
+      </div>
+      <div class="flex items-baseline justify-between gap-3">
+        <span class="klabel">Received</span>
+        <span class="font-mono text-slate-700">{{ inv.paid_bnt }} BNT</span>
+      </div>
+      <div class="flex items-baseline justify-between gap-3">
+        <span class="klabel">Confirmations</span>
+        <span class="font-mono text-slate-700">{{ inv.confirmations }} / {{ inv.confirmations_required }}</span>
+      </div>
+      <div class="flex items-baseline justify-between gap-3">
+        <span class="klabel">Expires</span>
+        <span class="font-mono text-slate-500" id="countdown">—</span>
+      </div>
     </div>
   </div>
-  <div class="payments" id="payments">
+  <div id="payments" class="mt-4 space-y-2">
     {% for p in inv.payments %}
-    <div class="payment">
-      <div class="txid">{{ p.txid }}</div>
+    <div class="rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+      <div class="break-all font-mono text-slate-600">{{ p.txid }}</div>
       <div>{{ p.amount_bnt }} BNT ·
         {% if p.confirmations == 0 %}in mempool{% else %}{{ p.confirmations }} conf.{% endif %}
         {% if inv.status == "expired" %} · late (awaiting confirmation){% endif %}

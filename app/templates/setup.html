@@ -4,65 +4,82 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OalgoPay — Setup</title>
-<link rel="stylesheet" href="/static/admin.css">
+<link rel="stylesheet" href="/static/tailwind.css">
 <script src="/static/htmx.min.js"></script>
 </head>
-<body>
-<main style="max-width:720px;margin:0 auto;padding:32px 16px;">
-  <div class="brand" style="font-size:20px;margin-bottom:4px;">OalgoPay <span class="dim">setup</span></div>
-  <div style="color:var(--muted);margin-bottom:20px;">First run — set your secrets, point at your Blocknet core, done. Everything else has a working default.</div>
+<body class="min-h-screen bg-slate-50 px-4 py-10 text-slate-800">
+<main class="mx-auto max-w-2xl">
+  <div class="mb-1 text-xl font-semibold text-slate-800">OalgoPay <span class="font-normal text-slate-400">setup</span></div>
+  <div class="mb-6 text-sm text-slate-500">First run — set your secrets, point at your Blocknet core, done. Everything else has a working default.</div>
   <div id="check-result"></div>
 
-  <form hx-post="/setup" hx-target="#check-result" hx-swap="innerHTML" class="settings-form" style="gap:18px;">
+  <form hx-post="/setup" hx-target="#check-result" hx-swap="innerHTML" class="space-y-5">
+    <div>
+      <h2 class="klabel mb-3">Core connection</h2>
+      <div class="space-y-3">
+        <label class="block text-sm text-slate-600">Core API address
+          <input name="api_base" value="{{ api_base }}" placeholder="http://127.0.0.1:18512" class="input mt-1">
+        </label>
+        <label class="block text-sm text-slate-600">Core data directory (contains api.cookie)
+          <input name="datadir" value="{{ datadir }}" class="input mt-1">
+        </label>
+        <button type="button" id="check-btn" class="btn"
+                hx-get="/setup/check" hx-trigger="click" hx-target="#check-result" hx-swap="innerHTML"
+                hx-include="[name='api_base'],[name='datadir']">Test connection</button>
+      </div>
+    </div>
 
-    <h2 style="margin:0;">Core connection</h2>
-    <label>Core API address
-      <input name="api_base" value="{{ api_base }}" placeholder="http://127.0.0.1:18512">
-    </label>
-    <label>Core data directory (contains api.cookie)
-      <input name="datadir" value="{{ datadir }}">
-    </label>
-    <button type="button" class="btn" id="check-btn"
-            hx-get="/setup/check" hx-trigger="click" hx-target="#check-result" hx-swap="innerHTML"
-            hx-include="[name='api_base'],[name='datadir']">Test connection</button>
+    <div>
+      <h2 class="klabel mb-3">Secrets</h2>
+      <div class="space-y-3">
+        <label class="block text-sm text-slate-600">Admin password (min 8 chars)
+          <input name="admin_password" id="pw" type="text" value="{{ suggest_pw }}" autocomplete="off" required class="input mt-1">
+        </label>
+        <label class="block text-sm text-slate-600">Merchant API token (min 16 chars)
+          <input name="api_token" id="tok" type="text" value="{{ suggest_token }}" autocomplete="off" required class="input mt-1">
+        </label>
+        <button type="button" class="btn" onclick="regen()">Regenerate both</button>
+      </div>
+    </div>
 
-    <h2 style="margin:8px 0 0;">Secrets</h2>
-    <label>Admin password (min 8 chars)
-      <input name="admin_password" id="pw" type="text" value="{{ suggest_pw }}" autocomplete="off" required>
-    </label>
-    <label>Merchant API token (min 16 chars)
-      <input name="api_token" id="tok" type="text" value="{{ suggest_token }}" autocomplete="off" required>
-    </label>
-    <button type="button" class="btn" onclick="regen()">Regenerate both</button>
+    <div>
+      <h2 class="klabel mb-3">Wallet (optional — loads it on the core now)</h2>
+      <div class="space-y-3">
+        <label class="block text-sm text-slate-600">Wallet file
+          <input name="wallet_path" placeholder="/path/to/shop.wallet.dat" class="input mt-1">
+        </label>
+        <label class="block text-sm text-slate-600">Wallet password (sent to the core once, never stored)
+          <input name="wallet_password" type="password" autocomplete="off" class="input mt-1">
+        </label>
+      </div>
+    </div>
 
-    <h2 style="margin:8px 0 0;">Public links</h2>
-    <label>Public base URL (used for pay links / QR page)
-      <input name="public_base_url" value="{{ public_base_url }}">
-    </label>
+    <div>
+      <h2 class="klabel mb-3">Payments (defaults are fine)</h2>
+      <div class="space-y-3">
+        <label class="block text-sm text-slate-600">Confirmations required (1–20)
+          <input type="number" name="confirmations_required" min="1" max="20" value="{{ confirmations }}" class="input mt-1">
+        </label>
+        <label class="block text-sm text-slate-600">Invoice expiry (minutes)
+          <input type="number" name="expiry_minutes" min="1" max="10080" value="{{ expiry }}" class="input mt-1">
+        </label>
+        <label class="block text-sm text-slate-600">Display handle (blank = raw address)
+          <input name="display_handle" value="{{ display_handle }}" placeholder="$yourname" class="input mt-1">
+        </label>
+        <label class="block text-sm text-slate-600">Webhook URL (optional — you can add it later in the panel)
+          <input name="webhook_url" placeholder="https://shop.example.com/hooks/oalgopay" class="input mt-1">
+        </label>
+      </div>
+    </div>
 
-    <h2 style="margin:8px 0 0;">Wallet (optional — loads it on the core now)</h2>
-    <label>Wallet file
-      <input name="wallet_path" placeholder="/path/to/shop.wallet.dat">
-    </label>
-    <label>Wallet password (sent to the core once, never stored)
-      <input name="wallet_password" type="password" autocomplete="off">
-    </label>
+    <div>
+      <h2 class="klabel mb-3">Public links</h2>
+      <label class="block text-sm text-slate-600">Public base URL (used for pay links / QR page)
+        <input name="public_base_url" value="{{ public_base_url }}" class="input mt-1">
+      </label>
+    </div>
 
-    <h2 style="margin:8px 0 0;">Payments (defaults are fine)</h2>
-    <label>Confirmations required (1–20)
-      <input type="number" name="confirmations_required" min="1" max="20" value="{{ confirmations }}">
-    </label>
-    <label>Invoice expiry (minutes)
-      <input type="number" name="expiry_minutes" min="1" max="10080" value="{{ expiry }}">
-    </label>
-    <label>Display handle (blank = raw address)
-      <input name="display_handle" value="{{ display_handle }}" placeholder="$yourname">
-    </label>
-    <label>Webhook URL (optional — you can add it later in the panel)
-      <input name="webhook_url" placeholder="https://shop.example.com/hooks/oalgopay">
-    </label>
-
-    <button class="btn primary" type="submit">Finish setup</button>
+    <button class="btn btn-primary w-full" type="submit">Finish setup</button>
   </form>
 </main>
 <script>
