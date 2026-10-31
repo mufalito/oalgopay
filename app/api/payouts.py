@@ -28,10 +28,9 @@ def require_payout_key(
     creds: Annotated[HTTPAuthorizationCredentials | None, Security(_bearer)],
     request: Request,
 ) -> None:
-    key = str(request.app.state.config.get("payout_api_key") or "")
-    if not key:
-        raise HTTPException(status_code=403, detail="payouts API is disabled (set payout_api_key in config.json)")
-    if creds is None or not hmac.compare_digest(creds.credentials, key):
+    if not db.has_active_api_keys("payouts"):
+        raise HTTPException(status_code=403, detail="payouts API is disabled (create a payouts key in the admin panel)")
+    if creds is None or not db.verify_api_key("payouts", creds.credentials):
         raise HTTPException(status_code=401, detail="invalid payout API key")
 
 

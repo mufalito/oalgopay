@@ -22,10 +22,25 @@ logging.basicConfig(
 log = logging.getLogger("oalgopay")
 
 
+def _seed_api_keys(cfg: dict) -> None:
+    """One-time: import config-borne credentials into the revocable api_keys
+    table so they can be managed (and revoked) from the admin panel."""
+    if db.get_setting("api_keys_seeded") == "1":
+        return
+    token = str(cfg.get("api_token") or "")
+    if token and not token.startswith("CHANGE_ME"):
+        db.create_api_key("merchant", "config (seeded)", token)
+    payout = str(cfg.get("payout_api_key") or "")
+    if payout:
+        db.create_api_key("payouts", "config (seeded)", payout)
+    db.set_setting("api_keys_seeded", "1")
+
+
 def create_app(cfg: dict) -> FastAPI:
     config_mod.ensure_data_dir(cfg)
     data_dir = Path(cfg["data_dir"])
     db.connect(data_dir / "gateway.db")
+    _seed_api_keys(cfg)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

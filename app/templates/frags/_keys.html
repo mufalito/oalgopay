@@ -1,0 +1,61 @@
+{% if new_key %}
+<div class="banner-warn mb-4 break-all">
+  Key created — copy it now, it is shown only once:
+  <b class="font-mono">{{ new_key }}</b>
+  <button class="copy-btn ml-2" data-copy="{{ new_key }}">copy</button>
+</div>
+{% endif %}
+{% if error %}<div class="banner-err mb-4">{{ error }}</div>{% endif %}
+
+<form class="mb-4 flex flex-wrap gap-2" hx-post="/admin/frag/keys" hx-target="#view-keys" hx-swap="innerHTML">
+  <input name="name" placeholder="key name (e.g. shop-backend)" required class="input w-52">
+  <select name="kind" class="input w-44">
+    <option value="merchant">merchant — create invoices</option>
+    <option value="payouts">payouts — move coins</option>
+  </select>
+  <button class="btn btn-primary" type="submit">Generate key</button>
+</form>
+<p class="mb-6 text-xs leading-relaxed text-slate-400">
+  Keys are stored hashed (sha256) and can be revoked any time — revocation is
+  immediate. Generate a replacement first, deploy it, then revoke the old one
+  for zero-downtime rotation. Payouts keys are the only credentials that can
+  move coins via <span class="font-mono">/api/v1/payouts</span>.
+</p>
+
+<div class="overflow-x-auto rounded-lg border border-slate-200">
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+      <th class="px-4 py-2.5 font-medium">#</th>
+      <th class="px-4 py-2.5 font-medium">Kind</th>
+      <th class="px-4 py-2.5 font-medium">Name</th>
+      <th class="px-4 py-2.5 font-medium">Key</th>
+      <th class="px-4 py-2.5 font-medium">Created</th>
+      <th class="px-4 py-2.5 font-medium">Last used</th>
+      <th class="px-4 py-2.5 font-medium"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for k in keys %}
+    <tr class="border-b border-slate-100 last:border-0 {{ 'opacity-50' if k.revoked_at }}">
+      <td class="px-4 py-2.5">{{ k.id }}</td>
+      <td class="px-4 py-2.5">
+        {% if k.kind == 'payouts' %}<span class="status-badge" data-status="pending">payouts</span>
+        {% else %}<span class="status-badge" data-status="seen">merchant</span>{% endif %}
+      </td>
+      <td class="px-4 py-2.5">{{ k.name }}</td>
+      <td class="px-4 py-2.5 font-mono text-xs text-slate-500">{{ k.prefix }}…</td>
+      <td class="px-4 py-2.5 text-slate-500">{{ fmt_time(k.created_at) }}</td>
+      <td class="px-4 py-2.5 text-slate-500">{{ fmt_time(k.last_used_at) }}</td>
+      <td class="px-4 py-2.5 text-right">
+        {% if not k.revoked_at %}
+        <button class="btn btn-danger" hx-post="/admin/frag/keys/{{ k.id }}/revoke" hx-target="#view-keys" hx-swap="innerHTML">Revoke</button>
+        {% else %}<span class="text-xs text-slate-400">revoked {{ fmt_time(k.revoked_at) }}</span>{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="px-4 py-6 text-center text-slate-400">no keys</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>

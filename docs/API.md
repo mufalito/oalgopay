@@ -2,7 +2,9 @@
 
 Base URL: `http://<gateway-host>:8096`
 
-Auth for `/api/v1/*`: HTTP bearer token — the `api_token` from `config.json`:
+Auth for `/api/v1/*`: HTTP bearer token — a **merchant** API key, generated
+(and revoked) in the admin panel's **API keys** tab; the `api_token` from
+`config.json`/setup is seeded as one on first boot:
 
 > **Interactive API docs are built in**: [`/docs`](http://localhost:8096/docs)
 > (Swagger UI — click **Authorize**, choose Bearer, paste your `api_token`,

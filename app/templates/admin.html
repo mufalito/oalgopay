@@ -14,7 +14,7 @@
     <div class="nav-links flex flex-wrap items-center gap-1">
       <a href="#overview" data-view="overview" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Overview</a>
       <a href="#invoices" data-view="invoices" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Invoices</a>
-      <a href="#webhooks" data-view="webhooks" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Webhooks</a>
+      <a href="#keys" data-view="keys" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">API keys</a>
       <a href="#send" data-view="send" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Send</a>
       <a href="/docs" target="_blank" rel="noopener" class="rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-brand-700">API Docs ↗</a>
       <a href="#settings" data-view="settings" class="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:text-brand-700">Settings</a>
@@ -27,6 +27,7 @@
   <section id="view-overview" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Overview</h1></section>
   <section id="view-invoices" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Invoices</h1></section>
   <section id="view-webhooks" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Webhooks</h1></section>
+  <section id="view-keys" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">API keys</h1></section>
   <section id="view-send" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Send</h1></section>
   <section id="view-settings" class="view hidden"><h1 class="mb-5 text-xl font-semibold text-slate-800">Settings</h1></section>
 </main>
@@ -37,6 +38,7 @@
   var urls = {
     overview: "/admin/frag/overview",
     invoices: "/admin/frag/invoices",
+    keys: "/admin/frag/keys",
     send: "/admin/frag/send",
     webhooks: "/admin/frag/webhooks",
     settings: "/admin/frag/settings",

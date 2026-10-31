@@ -25,12 +25,10 @@ def require_merchant(
     creds: Annotated[HTTPAuthorizationCredentials | None, Security(_bearer)],
     request: Request,
 ) -> None:
-    """Constant-time check of the bearer token against config.api_token."""
+    """DB-backed bearer check (sha256 at rest, revocable from the panel)."""
     if getattr(request.app.state, "setup_mode", False):
         raise HTTPException(status_code=403, detail="setup required — open /setup")
-    if creds is None or not hmac.compare_digest(
-        creds.credentials, request.app.state.config["api_token"]
-    ):
+    if creds is None or not db.verify_api_key("merchant", creds.credentials):
         raise HTTPException(
             status_code=401,
             detail="invalid bearer token",

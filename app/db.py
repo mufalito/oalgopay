@@ -72,6 +72,17 @@ CREATE TABLE IF NOT EXISTS payouts (
     idempotency_key TEXT NOT NULL UNIQUE,
     error TEXT
 );
+CREATE TABLE IF NOT EXISTS api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,             -- 'merchant' | 'payouts'
+    name TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,  -- sha256 hex of the full key
+    prefix TEXT NOT NULL,           -- first chars, for display
+    created_at INTEGER NOT NULL,
+    last_used_at INTEGER,
+    revoked_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_api_keys_lookup ON api_keys(kind, key_hash);
 """
 
 DEFAULT_SETTINGS: dict[str, str] = {
@@ -323,3 +334,53 @@ def list_payouts(limit: int = 25) -> list[dict[str, Any]]:
 
 def get_payout_by_key(idempotency_key: str) -> dict[str, Any] | None:
     return query_one("SELECT * FROM payouts WHERE idempotency_key = ?", (idempotency_key,))
+
+
+# --- api keys ---------------------------------------------------------------
+
+def create_api_key(kind: str, name: str, key: str) -> dict[str, Any]:
+    """Insert a full key; stores only its sha256. Returns the row (with prefix)."""
+    import hashlib
+    import time as _time
+
+    key_hash = hashlib.sha256(key.encode()).hexdigest()
+    execute(
+        "INSERT OR IGNORE INTO api_keys(kind, name, key_hash, prefix, created_at)"
+        " VALUES(?, ?, ?, ?, ?)",
+        (kind, name, key_hash, key[:6], int(_time.time())),
+    )
+    return query_one("SELECT * FROM api_keys WHERE key_hash = ?", (key_hash,)) or {}
+
+
+def verify_api_key(kind: str, key: str) -> dict[str, Any] | None:
+    """Active key of the given kind, or None. Updates last_used_at."""
+    import hashlib
+    import time as _time
+
+    row = query_one(
+        "SELECT * FROM api_keys WHERE kind = ? AND key_hash = ? AND revoked_at IS NULL",
+        (kind, hashlib.sha256(key.encode()).hexdigest()),
+    )
+    if row:
+        execute("UPDATE api_keys SET last_used_at = ? WHERE id = ?", (int(_time.time()), row["id"]))
+    return row
+
+
+def list_api_keys() -> list[dict[str, Any]]:
+    return query_all("SELECT * FROM api_keys ORDER BY kind, id")
+
+
+def revoke_api_key(key_id: int) -> bool:
+    import time as _time
+
+    cur = execute(
+        "UPDATE api_keys SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL",
+        (int(_time.time()), key_id),
+    )
+    return cur.rowcount > 0
+
+
+def has_active_api_keys(kind: str) -> bool:
+    return query_one(
+        "SELECT 1 FROM api_keys WHERE kind = ? AND revoked_at IS NULL LIMIT 1", (kind,)
+    ) is not None

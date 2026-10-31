@@ -478,6 +478,37 @@ async def frag_send(request: Request):
     return frag(request, "frags/_send.html", _send_ctx(result, None))
 
 
+# --- api keys (panel-managed, hashed at rest) --------------------------------
+
+@router.get("/admin/frag/keys", response_class=HTMLResponse)
+async def frag_keys(request: Request):
+    require_admin(request)
+    return frag(request, "frags/_keys.html", {"keys": db.list_api_keys(), "new_key": None, "error": None})
+
+
+@router.post("/admin/frag/keys", response_class=HTMLResponse)
+async def frag_create_key(request: Request):
+    """Generate a key, store its sha256, show the full value ONCE."""
+    require_admin(request)
+    params = await body_params(request)
+    name = str(params.get("name", "")).strip() or "unnamed"
+    kind = str(params.get("kind", ""))
+    if kind not in ("merchant", "payouts"):
+        return frag(request, "frags/_keys.html", {"keys": db.list_api_keys(), "new_key": None, "error": "kind must be merchant or payouts"})
+    import secrets as _secrets
+
+    full_key = f"{kind}_" + _secrets.token_hex(24)
+    db.create_api_key(kind, name, full_key)
+    return frag(request, "frags/_keys.html", {"keys": db.list_api_keys(), "new_key": full_key, "error": None})
+
+
+@router.post("/admin/frag/keys/{key_id}/revoke", response_class=HTMLResponse)
+async def frag_revoke_key(key_id: int, request: Request):
+    require_admin(request)
+    db.revoke_api_key(key_id)
+    return frag(request, "frags/_keys.html", {"keys": db.list_api_keys(), "new_key": None, "error": None})
+
+
 # --- minimal JSON surface (programmatic: e2e driver, scripts) ---------------
 
 @router.get("/admin/api/overview")

@@ -22,6 +22,13 @@ Live dashboard, refreshed on visit:
   was Ed25519-verified against `blocknet.id/.well-known/blocknet-id.json`
   and matches the wallet address. Shows `unverified (…)` if the resolver is
   unreachable or anything mismatches.
+- **API keys** — generate and revoke merchant / payouts credentials. Keys are
+  stored hashed (sha256); the full value is shown exactly once at creation.
+  Kind matters: `merchant` keys create invoices, `payouts` keys are the only
+  credentials that can move coins via `/api/v1/payouts`. Rotation without
+  downtime: generate the replacement, deploy it, revoke the old one —
+  revocation is immediate. Config-file tokens are seeded into this list on
+  first boot and can be revoked like any other key.
 - **Invoices** — counters per status.
 
 ## Invoices
