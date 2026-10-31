@@ -53,7 +53,14 @@ async def setup_page(request: Request):
 @router.get("/setup/check", response_class=HTMLResponse)
 async def setup_check(request: Request, api_base: str = "", datadir: str = ""):
     """Live fragment: is the core reachable at api_base, and is the wallet
-    loaded+unlocked there (cookie read from datadir)?"""
+    loaded+unlocked there (cookie read from datadir)?
+
+    SETUP MODE ONLY: this endpoint sends the core's api.cookie (spend
+    authority) to the given api_base, so it must never answer once the
+    gateway is configured — otherwise it is an unauthenticated
+    cookie-exfiltration primitive."""
+    if not _setup_mode(request):
+        raise HTTPException(status_code=404, detail="not found")
     rows: list[dict[str, Any]] = []
     if not api_base.startswith(("http://", "https://")):
         rows.append({"ok": False, "k": "Core API", "v": "address must start with http://"})
@@ -189,16 +196,23 @@ async def setup_submit(request: Request):
     elif wallet_path or wallet_password:
         wallet_note = "Wallet NOT loaded — both file and password are required. "
         wallet_failed = True
+    effective_bind = getattr(state, "effective_bind", cfg["host"])
+    bind_note = ""
+    if effective_bind != cfg["host"]:
+        bind_note = (
+            f"Currently listening on {effective_bind} only — "
+ f"restart the gateway to listen on {cfg['host']}. "
+        )
 
     if wallet_failed:
         # stay on the page so the message is actually read; setup itself is done
         return HTMLResponse(
-            f'<div class="banner">Setup complete — {wallet_note}'
+            f'<div class="banner">Setup complete — {wallet_note}{bind_note}'
             f'The admin panel is at <a href="/admin">/admin</a> '
             f'(password you set above).</div>'
         )
     resp = HTMLResponse(
-        f'<div class="banner ok">Setup complete — {wallet_note}opening the admin panel…</div>'
+        f'<div class="banner ok">Setup complete — {wallet_note}{bind_note}opening the admin panel…</div>'
     )
     resp.headers["HX-Redirect"] = "/admin"
     return resp

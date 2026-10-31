@@ -61,6 +61,12 @@ paymentgateway/
    uv run run.py            # or: uv run run.py --host 0.0.0.0 --port 8096
    ```
 
+   While unconfigured the gateway listens on **127.0.0.1 only** — the
+   wizard is unauthenticated, so loopback-only prevents anyone on your
+   network from racing you through setup (override with
+   `OALGOPAY_UNCONFIGURED_BIND=0.0.0.0` for remote headless boxes; after
+   setup, restart to listen on your configured host).
+
    Open `http://<host>:8096` — without a `config.json` the gateway boots in
    **setup mode** and redirects to `/setup`. The wizard:
 

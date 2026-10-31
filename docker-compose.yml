@@ -12,13 +12,16 @@ services:
       - ./wallets:/wallets
     ports:
       - "28080:28080"   # p2p (optional, helps sync/relay)
-    stop_grace_period: 30s
 
   gateway:
     image: oalgopay
     restart: unless-stopped
     depends_on:
       - core
+    environment:
+      # the compose network is private; the wizard must stay reachable
+      # through the published port, so it may bind all interfaces unconfigured
+      OALGOPAY_UNCONFIGURED_BIND: 0.0.0.0
     volumes:
       - oalgopay-data:/app/data          # shared: api.cookie + chain live here
       - ./config.json:/app/config.json   # cp config.example.json config.json first

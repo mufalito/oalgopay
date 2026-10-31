@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 import uvicorn
@@ -20,17 +21,29 @@ def main() -> int:
 
     try:
         cfg = load_config(args.config)
+        bind_host = cfg["host"]
     except ConfigError as exc:
-        print(f"note: {exc}", file=sys.stderr)
-        print("starting in SETUP MODE — open http://<host>:<port>/setup to configure", file=sys.stderr)
         cfg = default_config()
+        # While unconfigured the setup wizard is unauthenticated: bind
+        # loopback only so nobody on the network can race the owner through
+        # setup (or probe /setup/check). Override with
+        # OALGOPAY_UNCONFIGURED_BIND=0.0.0.0 for remote headless setups
+        # (the Docker compose file does).
+        bind_host = os.environ.get("OALGOPAY_UNCONFIGURED_BIND", "127.0.0.1")
     if args.host:
         cfg["host"] = args.host
     if args.port:
         cfg["port"] = args.port
+    if bind_host != cfg["host"]:
+        print(
+            f"starting in SETUP MODE on {bind_host}:{cfg['port']} — "
+            f"open http://{bind_host}:{cfg['port']}/setup to configure",
+            file=sys.stderr,
+        )
 
     app = create_app(cfg)
-    uvicorn.run(app, host=cfg["host"], port=int(cfg["port"]), log_level="info")
+    app.state.effective_bind = bind_host
+    uvicorn.run(app, host=bind_host, port=int(cfg["port"]), log_level="info")
     return 0
 
 

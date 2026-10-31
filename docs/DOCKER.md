@@ -22,6 +22,11 @@ docker compose up -d --build
 Open **http://localhost:8096** — the wizard prefills `http://core:18512` and
 `/app/data/blocknet` automatically (via `OALGOPAY_API_BASE`/`OALGOPAY_DATADIR`).
 
+Bare-metal installs listen on loopback while unconfigured; the compose file
+sets `OALGOPAY_UNCONFIGURED_BIND=0.0.0.0` because a published port only
+works with an all-interface bind inside the container (the core's API stays
+private to the compose network).
+
 ## Wallet in Docker
 
 Container paths matter: the wallet lives at **`/wallets/<file>`** inside the
