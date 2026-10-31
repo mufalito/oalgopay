@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .. import db, handle, invoices, webhooks
-from .schemas import SettingsOut, WebhookCreateRequest, WebhookOut
+from .schemas import PayoutOut, SendRequest, SendResult, SettingsOut, WebhookCreateRequest, WebhookOut
 from ..auth import SESSION_COOKIE, check_session_token, make_session_token, require_admin
 from ..blocknet import BlocknetError
 from .merchant import cancel_invoice_service, create_invoice_service, serialize_invoice
@@ -420,24 +420,10 @@ def _send_ctx(result: dict[str, Any] | None, error: str | None) -> dict[str, Any
     return {"payouts": db.list_payouts(), "result": result, "error": error}
 
 
-@router.post("/admin/frag/send", response_class=HTMLResponse)
-async def frag_send(request: Request):
-    """Spend wallet funds to an arbitrary address. Admin-only; every send
-    carries a fresh daemon Idempotency-Key and is recorded in the payouts log.
-    Sending to this gateway's own address with an INV- memo will credit that
-    invoice as paid — use memos deliberately."""
-    require_admin(request)
+async def send_service(request: Request, address: str, amount_atomic: int, memo: str | None) -> dict[str, Any]:
+    """Shared by the panel form and POST /admin/api/send. Fresh daemon
+    Idempotency-Key per call; every attempt is recorded in the payouts log."""
     import uuid
-
-    params = await body_params(request)
-    address = str(params.get("address", "")).strip()
-    memo = str(params.get("memo", "")).strip() or None
-    try:
-        amount_atomic = invoices.parse_amount_bnt(str(params.get("amount_bnt", "")))
-    except invoices.AmountError as exc:
-        return frag(request, "frags/_send.html", _send_ctx(None, f"amount: {exc}"))
-    if not address:
-        return frag(request, "frags/_send.html", _send_ctx(None, "address is required"))
 
     key = str(uuid.uuid4())
     recipient: dict[str, Any] = {"address": address, "amount": amount_atomic}
@@ -451,7 +437,7 @@ async def frag_send(request: Request):
             "amount_atomic": amount_atomic, "memo": memo, "txid": None,
             "fee_atomic": None, "idempotency_key": key, "error": str(exc),
         })
-        return frag(request, "frags/_send.html", _send_ctx(None, f"daemon rejected: {exc}"))
+        raise
     fee = sent.get("fee")
     txid = sent.get("txid")
     db.insert_payout({
@@ -460,12 +446,35 @@ async def frag_send(request: Request):
         "fee_atomic": fee if isinstance(fee, int) else None,
         "idempotency_key": key, "error": None,
     })
-    result = {
+    return {
         "txid": txid,
         "amount_atomic": amount_atomic,
         "fee_atomic": fee if isinstance(fee, int) else None,
         "address": address,
+        "memo": memo,
     }
+
+
+@router.post("/admin/frag/send", response_class=HTMLResponse)
+async def frag_send(request: Request):
+    """Spend wallet funds to an arbitrary address. Admin-only; every send
+    carries a fresh daemon Idempotency-Key and is recorded in the payouts log.
+    Sending to this gateway's own address with an INV- memo will credit that
+    invoice as paid — use memos deliberately."""
+    require_admin(request)
+    params = await body_params(request)
+    address = str(params.get("address", "")).strip()
+    memo = str(params.get("memo", "")).strip() or None
+    try:
+        amount_atomic = invoices.parse_amount_bnt(str(params.get("amount_bnt", "")))
+    except invoices.AmountError as exc:
+        return frag(request, "frags/_send.html", _send_ctx(None, f"amount: {exc}"))
+    if not address:
+        return frag(request, "frags/_send.html", _send_ctx(None, "address is required"))
+    try:
+        result = await send_service(request, address, amount_atomic, memo)
+    except BlocknetError as exc:
+        return frag(request, "frags/_send.html", _send_ctx(None, f"daemon rejected: {exc}"))
     return frag(request, "frags/_send.html", _send_ctx(result, None))
 
 
@@ -489,6 +498,28 @@ async def json_overview(request: Request):
     except BlocknetError:
         wallet["balance"] = None
     return {"node": node, "wallet": wallet}
+
+
+@router.post(
+    "/admin/api/send",
+    response_model=SendResult,
+    summary="Send funds (manual payout/refund)",
+    description="Admin-session-only spend to any address. Fresh core Idempotency-Key "
+    "per call; recorded in the payouts log. A memo containing an INV-… id sent "
+    "to this gateway's own address will credit that invoice as paid.",
+)
+async def json_send(body: SendRequest, request: Request):
+    require_admin(request)
+    try:
+        return await send_service(request, body.address.strip(), body.amount_atomic_resolved, body.memo)
+    except BlocknetError as exc:
+        raise HTTPException(status_code=422, detail=f"core rejected: {exc}") from exc
+
+
+@router.get("/admin/api/payouts", response_model=list[PayoutOut], summary="Payout history")
+async def json_payouts(request: Request, limit: int = 25):
+    require_admin(request)
+    return db.list_payouts(max(1, min(limit, 200)))
 
 
 @router.get("/admin/api/settings", response_model=SettingsOut, summary="Current settings")

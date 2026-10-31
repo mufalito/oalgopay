@@ -158,6 +158,8 @@ curl -s -c jar -X POST localhost:8096/admin/login \
 | `PATCH /admin/api/settings` | `{confirmations_required: 1-20, expiry_minutes: 1-10080, amount_fallback_matching: 0/1, display_handle: "" or "$handle"}` |
 | `POST /admin/api/webhooks` | `{url}` → `201 {id, url, secret}` (secret shown once) |
 | `DELETE /admin/api/webhooks/{id}` | remove endpoint (+ its delivery log) |
+| `POST /admin/api/send` | `{address, amount_bnt \| amount_atomic, memo?}` → `{txid, amount_atomic, fee_atomic, …}` — spend funds (fresh Idempotency-Key per call, recorded in the payouts log) |
+| `GET /admin/api/payouts?limit=25` | payout audit trail (successful + rejected) |
 
 Everything else in the panel is htmx fragments (`/admin/frag/*`) — drive
 those in a browser, or read `app/api/admin.py`.

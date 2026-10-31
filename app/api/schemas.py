@@ -119,3 +119,46 @@ class WebhookOut(BaseModel):
     url: str
     active: bool
     secret: str = Field(description="Signing secret — shown once, store it now")
+
+
+class SendRequest(BaseModel):
+    """Manual payout/refund. Exactly one of amount_bnt / amount_atomic."""
+
+    address: str = Field(min_length=8, description="recipient address (ULP…)")
+    amount_bnt: str | float | None = Field(default=None, description="decimal BNT, ≤ 8 dp")
+    amount_atomic: int | None = Field(default=None, gt=0, description="atomic units (1 BNT = 1e8)")
+    memo: str | None = Field(default=None, max_length=200)
+
+    amount_atomic_resolved: int = Field(default=0, exclude=True)
+
+    @model_validator(mode="after")
+    def _resolve_amount(self) -> "SendRequest":
+        if (self.amount_bnt is None) == (self.amount_atomic is None):
+            raise ValueError("provide exactly one of amount_bnt, amount_atomic")
+        if self.amount_bnt is not None:
+            try:
+                self.amount_atomic_resolved = parse_amount_bnt(self.amount_bnt)
+            except AmountError as exc:
+                raise ValueError(str(exc)) from exc
+        else:
+            self.amount_atomic_resolved = int(self.amount_atomic)  # type: ignore[arg-type]
+        return self
+
+
+class SendResult(BaseModel):
+    txid: str
+    address: str
+    amount_atomic: int
+    fee_atomic: int | None = None
+    memo: str | None = None
+
+
+class PayoutOut(BaseModel):
+    id: int
+    created_at: int
+    address: str
+    amount_atomic: int
+    memo: str | None
+    txid: str | None
+    fee_atomic: int | None
+    error: str | None
