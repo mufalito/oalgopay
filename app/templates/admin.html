@@ -72,6 +72,27 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+
+/* copy-to-clipboard for any .copy-btn (and window.copyText for one-offs) */
+window.copyText = function (text, btn) {
+  var done = function () {
+    if (!btn) return;
+    var old = btn.textContent;
+    btn.textContent = "copied";
+    setTimeout(function () { btn.textContent = old; }, 1200);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, done);
+  } else {
+    var ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); document.body.removeChild(ta); done();
+  }
+};
+document.addEventListener("click", function (e) {
+  var btn = e.target.closest(".copy-btn");
+  if (btn) { e.preventDefault(); e.stopPropagation(); window.copyText(btn.dataset.copy, btn); }
+}, true);
 </script>
 </body>
 </html>

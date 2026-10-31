@@ -6,10 +6,11 @@
     {% if inv.status not in ("confirmed", "cancelled") %}
     <button class="btn" hx-post="/admin/frag/invoice/{{ inv.id }}/confirm" hx-target="#invoice-detail-card" hx-swap="outerHTML">Confirm (manual)</button>
     {% endif %}
+    <button class="btn" onclick="copyText('{{ inv.pay_url }}', this)">Copy pay link</button>
     <button class="btn" hx-post="/admin/frag/invoice/{{ inv.id }}/resend" hx-target="#invoice-detail-card" hx-swap="outerHTML">Resend webhooks</button>
     <button class="btn" onclick="closeInvModal()">Close</button>
   </div>
-  <pre class="overflow-x-auto rounded-md border border-slate-100 bg-slate-50 p-4 font-mono text-xs leading-relaxed text-slate-600">{% for k in ["id", "status", "amount_bnt", "paid_bnt", "memo", "label", "created_at", "expires_at", "confirmations_required", "late_payment", "overpaid"] %}{{ k }}: {{ inv[k] }}
+  <pre class="overflow-x-auto break-all whitespace-pre-wrap rounded-md border border-slate-100 bg-slate-50 p-4 font-mono text-xs leading-relaxed text-slate-600">{% for k in ["id", "status", "amount_bnt", "paid_bnt", "memo", "label", "created_at", "expires_at", "confirmations_required", "late_payment", "overpaid", "confirmed_at", "uri", "pay_url", "bntpay_url", "qr_url"] %}{{ k }}: {{ inv[k] }}
 {% endfor %}{% if inv.payments %}payments:
 {% for p in inv.payments %}  - txid={{ p.txid }} index={{ p.output_index }} amount={{ p.amount_bnt }} height={{ p.block_height }} conf={{ p.confirmations }} method={{ p.match_method }}
 {% endfor %}{% endif %}{% if inv.deliveries %}webhook deliveries:

@@ -6,6 +6,7 @@
       <th class="px-4 py-2.5 font-medium">Amount</th>
       <th class="px-4 py-2.5 font-medium">Paid</th>
       <th class="px-4 py-2.5 font-medium">Status</th>
+      <th class="px-4 py-2.5 font-medium">Pay link</th>
       <th class="px-4 py-2.5 font-medium">Created</th>
       <th class="px-4 py-2.5 font-medium">Expires</th>
     </tr>
@@ -18,11 +19,14 @@
       <td class="px-4 py-2.5 font-mono">{{ fmt_bnt(i.amount_atomic) }}</td>
       <td class="px-4 py-2.5 font-mono text-slate-500">{{ fmt_bnt(i.paid_atomic) }}</td>
       <td class="px-4 py-2.5"><span class="status-badge" data-status="{{ i.status }}">{{ i.status }}</span></td>
+      <td class="px-4 py-2.5">
+        <button class="copy-btn" data-copy="{{ i.pay_url }}" title="{{ i.pay_url }}">copy</button>
+      </td>
       <td class="px-4 py-2.5 text-slate-500">{{ fmt_time(i.created_at) }}</td>
       <td class="px-4 py-2.5 text-slate-500">{{ fmt_time(i.expires_at) }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="6" class="px-4 py-6 text-center text-slate-400">no invoices</td></tr>
+    <tr><td colspan="7" class="px-4 py-6 text-center text-slate-400">no invoices</td></tr>
     {% endfor %}
   </tbody>
 </table>

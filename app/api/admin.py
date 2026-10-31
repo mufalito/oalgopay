@@ -177,6 +177,7 @@ templates.env.globals["fmt_bnt"] = lambda atoms: f"{atoms / 1e8:.8f}".rstrip("0"
 async def frag_invoices(request: Request, status: str = "", limit: int = 50):
     require_admin(request)
     rows = db.list_invoices(status=status or None, limit=max(1, min(limit, 200)))
+    _attach_pay_urls(request, rows)
     return frag(request, "frags/_invoices.html", {"invoices": rows, "status": status})
 
 
@@ -185,7 +186,14 @@ async def frag_invoices_table(request: Request, status: str = "", limit: int = 5
     """Table-only variant used by the filter chips (swaps just #inv-table-wrap)."""
     require_admin(request)
     rows = db.list_invoices(status=status or None, limit=max(1, min(limit, 200)))
+    _attach_pay_urls(request, rows)
     return frag(request, "frags/_invoices_table.html", {"invoices": rows})
+
+
+def _attach_pay_urls(request: Request, rows: list[dict[str, Any]]) -> None:
+    base = request.app.state.config["public_base_url"].rstrip("/")
+    for r in rows:
+        r["pay_url"] = f"{base}/pay/{r['id']}"
 
 
 @router.get("/admin/frag/invoice/{inv_id}", response_class=HTMLResponse)
@@ -219,9 +227,9 @@ async def frag_create_invoice(request: Request):
         body["expires_in_min"] = int(params["expires_in_min"])
     invoice = create_invoice_service(body, request)
     rows = db.list_invoices(limit=50)
+    _attach_pay_urls(request, rows)
     table_html = templates.env.get_template("frags/_invoices_table.html").render(
         invoices=rows,
-        inv={**invoice, "payments": invoice.get("payments", []), "deliveries": []},
     )
     return HTMLResponse(
         f'<div id="inv-table-wrap" hx-swap-oob="innerHTML">{table_html}</div>'
