@@ -10,8 +10,11 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/pay-page.png" width="420" alt="OalgoPay hosted pay page">
-  <img src="docs/img/admin-overview.png" width="460" alt="OalgoPay admin panel">
+  <img src="docs/img/pay-page.png" width="400" alt="OalgoPay hosted pay page">
+  <img src="docs/img/admin-overview.png" width="440" alt="OalgoPay admin panel">
+  <br>
+  <img src="docs/img/admin-invoices.png" width="440" alt="Invoices with pay links and creation banner">
+  <img src="docs/img/admin-api-keys.png" width="440" alt="API key management">
 </p>
 
 ---
@@ -41,10 +44,12 @@ Blocknet core (headless) ──api.cookie──▶ watcher (SSE + poll) ──�
 | **Pay page** | QR of the `blocknet://` URI, copy buttons, live status, countdown, "Open in Wallet", bntpay.com link — htmx-polled, no page reloads |
 | **Matching** | memo-first; optional exact-amount fallback (oldest unpaid invoice); idempotent by txid+output; overpaid / underpaid / late-payment flags |
 | **Webhooks** | `payment.seen`, `invoice.confirmed`, `invoice.expired` (+ manual resend, test pings); `event_id` for dedupe, `previous_status` for transitions; HMAC-SHA256 signatures with timestamp binding; retries 30 s → 2 h |
-| **Admin panel** | node/wallet/handle health, invoice CRUD + manual confirm, webhook management + delivery log, manual payouts with audit trail, live settings |
+| **Admin panel** | node/wallet/handle health, invoice CRUD + manual confirm, webhook management + delivery log, manual payouts with audit trail, API key management, live settings |
 | **Setup wizard** | first run at `/setup`: detects your core, live-tests the connection, generates secrets — no config editing required |
-| **Payouts API** | separate `payout_api_key` + `POST /api/v1/payouts` with client idempotency keys — retry-safe automation that can never double-pay |
+| **Payouts API** | separate payouts key + `POST /api/v1/payouts` with client idempotency keys — retry-safe automation that can never double-pay |
+| **API keys** | panel-managed merchant/payouts credentials — hashed at rest, revocable, shown once; kind isolation (invoice keys ≠ coin-movement keys) |
 | **API docs** | OpenAPI at `/docs` + `/redoc`, typed schemas, working Authorize button |
+| **Examples** | three FastAPI demos in `examples/` — digital goods shop, API credit top-up, automated payouts |
 | **Self-contained** | one directory: app, core binary, chain data, wallet. Nothing phones home. |
 
 ## Quick start

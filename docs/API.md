@@ -2,9 +2,9 @@
 
 Base URL: `http://<gateway-host>:8096`
 
-Auth for `/api/v1/*`: HTTP bearer token — a **merchant** API key, generated
-(and revoked) in the admin panel's **API keys** tab; the `api_token` from
-`config.json`/setup is seeded as one on first boot:
+Auth for `/api/v1/*` (invoices): HTTP bearer token — a **merchant** API key,
+generated (and revoked) in the admin panel's **API keys** tab. The
+`api_token` from `config.json`/setup is seeded as one on first boot:
 
 > **Interactive API docs are built in**: [`/docs`](http://localhost:8096/docs)
 > (Swagger UI — click **Authorize**, choose Bearer, paste your `api_token`,
@@ -168,12 +168,13 @@ those in a browser, or read `app/api/admin.py`.
 
 ## Payouts API — automated payouts
 
-Separate credential on purpose: `Authorization: Bearer <payout_api_key>`
-(`payout_api_key` in `config.json`; blank = the whole surface returns 403).
-Apps that create invoices with `api_token` **cannot** move coins.
+Separate credential on purpose: `Authorization: Bearer <payouts API key>`
+(generated in the admin panel's **API keys** tab, kind: `payouts`; the
+`payout_api_key` from `config.json`/setup is seeded as one on first boot).
+Apps that create invoices with a merchant key **cannot** move coins.
 
 ```bash
-PK=…   # payout_api_key
+PK=…   # payouts API key (admin panel → API keys → Generate, kind: payouts)
 
 # pay out — supply idempotency_key so retries can never double-pay
 curl -s -X POST localhost:8096/api/v1/payouts \

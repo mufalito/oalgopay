@@ -35,16 +35,21 @@ Live dashboard, refreshed on visit:
 
 - **Filter chips** — all / pending / seen / confirmed / expired / cancelled.
 - **Create** — amount (BNT), optional label + expiry minutes (defaults from
-  Settings). The response opens the new invoice's detail with its full JSON
-  (links, URI, QR URL).
-- **Row click** — detail view: status, amounts, memo, URIs, matched payments
-  (`match_method`, block height, confirmations) and webhook delivery history.
-- **Actions** (per status):
+  Settings). A banner shows the new invoice's **pay link** with a copy button.
+- **Pay link column** — copy any invoice's hosted pay page URL without
+  opening the detail.
+- **Row click** — opens a centered **modal** (no scrolling) with the full
+  invoice data: status, amounts, memo, all URIs (`blocknet://`, pay page,
+  bntpay.com, QR), matched payments (`match_method`, block height,
+  confirmations) and webhook delivery history.
+- **Actions** (in the modal, per status):
   - *Cancel* — pending/seen → cancelled (terminal).
   - *Confirm (manual)* — force-confirm; records
     `metadata.manual_confirm {at, previous_status, paid_atomic}` and emits
     `invoice.confirmed`.
+  - *Copy pay link* — copies the hosted pay page URL.
   - *Resend webhooks* — enqueues `invoice.updated` to all active endpoints.
+- **Dismiss modal** — Close button, backdrop click, or Escape.
 
 ### Invoice lifecycle
 
