@@ -22,7 +22,7 @@ def main() -> int:
     try:
         cfg = load_config(args.config)
         bind_host = cfg["host"]
-    except ConfigError as exc:
+    except ConfigError:
         cfg = default_config()
         # While unconfigured the setup wizard is unauthenticated: bind
         # loopback only so nobody on the network can race the owner through

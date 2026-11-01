@@ -1,7 +1,6 @@
 """Merchant REST API (Bearer token auth) — schema-typed for OpenAPI docs."""
 from __future__ import annotations
 
-import hmac
 import json
 import sqlite3
 import time

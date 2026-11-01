@@ -5,6 +5,7 @@
   <input name="expires_in_min" placeholder="expiry min" inputmode="numeric" class="input w-28">
   <button class="btn btn-primary" type="submit">Create</button>
 </form>
+<div id="create-result"></div>
 <div class="mb-4 flex flex-wrap gap-2" id="inv-filters">
   {% for s in ["", "pending", "seen", "confirmed", "expired", "cancelled"] %}
   <button class="chip{% if s == status %} chip-active{% endif %}"

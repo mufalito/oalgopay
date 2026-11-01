@@ -232,6 +232,10 @@ async def frag_create_invoice(request: Request):
         invoices=rows,
     )
     return HTMLResponse(
+        f'<div id="create-result" hx-swap-oob="innerHTML">'
+        f'<div class="banner-ok mb-4">Invoice {invoice["id"]} created — '
+        f'pay link: <span class="font-mono text-xs">{invoice["pay_url"]}</span> '
+        f'<button class="copy-btn ml-2" data-copy="{invoice["pay_url"]}">copy</button></div></div>'
         f'<div id="inv-table-wrap" hx-swap-oob="innerHTML">{table_html}</div>'
     )
 

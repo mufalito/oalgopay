@@ -6,7 +6,6 @@ coins). Disabled entirely while `payout_api_key` is unset/blank.
 """
 from __future__ import annotations
 
-import hmac
 import re
 import secrets as pysecrets
 import time

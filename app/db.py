@@ -84,6 +84,8 @@ CREATE TABLE IF NOT EXISTS api_keys (
     revoked_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_api_keys_lookup ON api_keys(kind, key_hash);
+CREATE INDEX IF NOT EXISTS idx_invoices_created ON invoices(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice_matched ON payments(invoice_id, matched_at);
 """
 
 DEFAULT_SETTINGS: dict[str, str] = {

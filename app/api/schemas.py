@@ -15,7 +15,8 @@ class InvoiceCreateRequest(BaseModel):
         default=None, description="Decimal BNT amount, ≤ 8 decimal places, > 0 (e.g. \"12.5\")"
     )
     amount_atomic: int | None = Field(
-        default=None, gt=0, description="Atomic units (1 BNT = 100000000). Mutually exclusive with amount_bnt."
+        default=None, gt=0, le=2_100_000_000_000_000,  # 21M BNT max supply
+        description="Atomic units (1 BNT = 100000000). Mutually exclusive with amount_bnt."
     )
     label: str | None = Field(default=None, max_length=200, description="Free-form display label")
     expires_in_min: int | None = Field(
