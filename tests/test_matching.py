@@ -307,3 +307,4 @@ class TestInvoiceJson(unittest.TestCase):
                             invoices_, {}, set(), SETTINGS, now=NOW)
         self.assertEqual(res["events"][0]["previous_status"], "pending")
         self.assertEqual(res["events"][1]["previous_status"], "pending")
+

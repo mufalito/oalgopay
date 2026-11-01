@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS invoices (
     id TEXT PRIMARY KEY,
     created_at INTEGER NOT NULL,
+    created_height INTEGER NOT NULL DEFAULT 0,
     expires_at INTEGER NOT NULL,
     amount_atomic INTEGER NOT NULL,
     memo TEXT NOT NULL,
@@ -88,7 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_lookup ON api_keys(kind, key_hash);
 DEFAULT_SETTINGS: dict[str, str] = {
     "confirmations_required": "10",
     "expiry_minutes": "60",
-    "amount_fallback_matching": "1",
+    "amount_fallback_matching": "0",
     "display_handle": "",
     "last_known_address": "",
 }
@@ -104,6 +105,9 @@ def connect(path: str | Path) -> sqlite3.Connection:
     _conn.execute("PRAGMA foreign_keys=ON")
     _conn.executescript(SCHEMA)
     # lightweight migrations for pre-existing databases
+    _inv_cols = {r[1] for r in _conn.execute("PRAGMA table_info(invoices)")}
+    if "created_height" not in _inv_cols:
+        _conn.execute("ALTER TABLE invoices ADD COLUMN created_height INTEGER NOT NULL DEFAULT 0")
     _cols = {r[1] for r in _conn.execute("PRAGMA table_info(webhook_deliveries)")}
     for _col, _decl in (("event_id", "TEXT"), ("previous_status", "TEXT")):
         if _col not in _cols:
@@ -158,9 +162,9 @@ def set_setting(key: str, value: str) -> None:
 
 def insert_invoice(inv: dict[str, Any]) -> None:
     execute(
-        "INSERT INTO invoices(id, created_at, expires_at, amount_atomic, memo, label, metadata,"
+        "INSERT INTO invoices(id, created_at, created_height, expires_at, amount_atomic, memo, label, metadata,"
         " status, paid_atomic, confirmed_at, late_payment, overpaid)"
-        " VALUES(:id, :created_at, :expires_at, :amount_atomic, :memo, :label, :metadata,"
+        " VALUES(:id, :created_at, :created_height, :expires_at, :amount_atomic, :memo, :label, :metadata,"
         " :status, :paid_atomic, :confirmed_at, :late_payment, :overpaid)",
         inv,
     )

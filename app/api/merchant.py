@@ -66,6 +66,7 @@ def create_invoice_service(body: InvoiceCreateRequest | dict[str, Any], request:
         amount_atomic=body.amount_atomic_resolved,
         label=body.label,
         metadata=body.metadata,
+        chain_height=getattr(request.app.state, "chain_height", 0),
     )
     inv["memo"] = inv["id"]
     row = dict(inv, metadata=json.dumps(inv["metadata"]))

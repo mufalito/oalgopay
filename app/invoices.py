@@ -71,10 +71,12 @@ def build_invoice(
     amount_atomic: int,
     label: str | None = None,
     metadata: dict[str, Any] | None = None,
+    chain_height: int = 0,
 ) -> dict[str, Any]:
     return {
         "id": mint_id(),
         "created_at": now,
+        "created_height": chain_height,
         "expires_at": now + expiry_minutes * 60,
         "amount_atomic": amount_atomic,
         "memo": "",  # filled by caller after mint (memo == id)
@@ -236,12 +238,15 @@ def match_outputs(
         if memo_inv and memo_inv in by_id and by_id[memo_inv]["status"] in ("pending", "seen", "expired"):
             target_id, method = memo_inv, "memo"
         elif fallback_enabled and amount > 0:
+            # Only match outputs that could not predate the invoice:
+            # mempool (height 0) or at/after the invoice's creation block.
             candidates = [
                 inv
                 for inv in by_id.values()
                 if inv["status"] in ACTIVE_STATUSES
                 and inv["amount_atomic"] == amount
                 and inv["paid_atomic"] == 0
+                and (block_height == 0 or block_height >= inv.get("created_height", 0))
             ]
             if candidates:
                 oldest = min(candidates, key=lambda inv: inv["created_at"])
