@@ -168,6 +168,7 @@ async def setup_submit(request: Request):
         "admin_password": admin_password,
         "api_token": api_token,
         "payout_api_key": payout_api_key,
+        "public_base_url": public_base_url or str(request.base_url).rstrip("/"),
     })
     cfg_path = config_mod.DEFAULT_CONFIG_PATH
     cfg_path.write_text(json.dumps(cfg, indent=2) + "\n")

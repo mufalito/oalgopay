@@ -43,7 +43,7 @@ def serialize_invoice(request: Request, inv: dict[str, Any], include_payments: b
         inv,
         payments,
         settings=db.get_settings(),
-        public_base_url=state.config["public_base_url"],
+        public_base_url=state.config.get("public_base_url") or str(request.base_url).rstrip("/"),
         address=db.get_setting("last_known_address", ""),
         chain_height=getattr(state, "chain_height", None),
     )
