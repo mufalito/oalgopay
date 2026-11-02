@@ -82,7 +82,7 @@ Blocknet core (headless) ──api.cookie──▶ watcher (SSE + poll) ──�
 ### Create your first invoice
 
 ```bash
-TOKEN=…   # the api_token from config.json / setup
+TOKEN=…   # a merchant API key (admin panel → API keys tab)
 
 curl -s -X POST localhost:8096/api/v1/invoices \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
@@ -92,6 +92,45 @@ curl -s -X POST localhost:8096/api/v1/invoices \
 The response carries everything you need: `pay_url` (the link to give the
 customer), the `blocknet://` URI, a bntpay.com checkout, and the QR. Full
 reference: **`/docs`** on your running gateway, or [docs/API.md](docs/API.md).
+
+### Send your first payout
+
+Payouts use a **separate API key** — not the merchant token above. This is
+deliberate: apps that create invoices cannot move coins. You need a
+`payouts` key from the admin panel (**API keys** tab → Generate → kind:
+`payouts`). It's shown once — store it securely.
+
+```bash
+PK=…   # payouts API key (admin panel → API keys → kind: payouts)
+
+curl -s -X POST localhost:8096/api/v1/payouts \
+  -H "Authorization: Bearer $PK" -H 'Content-Type: application/json' \
+  -d '{"address":"ULP…", "amount_bnt":"1.25", "memo":"withdrawal #77",
+       "idempotency_key":"withdraw-77"}'
+```
+
+**The `idempotency_key` is what makes this safe for automation** — it's
+your own identifier for this payout. If your script retries (network
+timeout, crash, deploy), sending the exact same request returns the
+original result with `"replayed": true` instead of sending coins twice.
+Use a unique key per logical payout (e.g. `withdraw-{user_id}-{timestamp}`).
+
+```json
+{
+  "txid": "876c6f6d…",
+  "amount_atomic": 125000000,
+  "fee_atomic": 69370,
+  "idempotency_key": "withdraw-77",
+  "replayed": false
+}
+```
+
+Check status and history:
+
+```bash
+curl -s -H "Authorization: Bearer $PK" localhost:8096/api/v1/payouts?limit=10
+curl -s -H "Authorization: Bearer $PK" localhost:8096/api/v1/payouts/4
+```
 
 ### Receive webhooks
 
