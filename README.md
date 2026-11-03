@@ -133,6 +133,42 @@ curl -s -H "Authorization: Bearer $PK" localhost:8096/api/v1/payouts?limit=10
 curl -s -H "Authorization: Bearer $PK" localhost:8096/api/v1/payouts/4
 ```
 
+### Verify your first wallet sign-in
+
+Sign-in verification uses a **separate `auth` API key** — server-to-server
+only, never in browser code. This is what lets your *other* services (faucet,
+forum, dashboard) offer "Sign in with Blocknet wallet" without hosting their
+own node. You need an `auth` key from the admin panel (**API keys** tab →
+Generate → kind: `auth`). It's shown once — store it securely.
+
+```bash
+AK=…   # auth API key (admin panel → API keys → kind: auth)
+
+# 1. mint a single-use challenge (your backend)
+curl -s -X POST localhost:8096/api/v1/auth/challenge -H "Authorization: Bearer $AK"
+# → {"nonce":"9f86d081…","message":"oalgopay:login:9f86d081…","expires_at":1793218743}
+
+# 2. show `message` to the user — their Blocknet wallet signs it
+#    ("sign message" feature)
+
+# 3. verify the address+signature pair they hand back
+curl -s -X POST localhost:8096/api/v1/auth/verify \
+  -H "Authorization: Bearer $AK" -H 'Content-Type: application/json' \
+  -d '{"nonce":"9f86d081…", "address":"ULP…", "signature":"<128 hex chars>"}'
+```
+
+```json
+{"nonce": "9f86d081…", "address": "ULP…", "verified": true}
+```
+
+**The `oalgopay:login:<nonce>` message is what blocks replay** — the nonce is
+globally single-use and the prefix is fixed, so a signature obtained for any
+other site's challenge can never verify here. On `verified: true`, log the
+user into *your* service (`address` is the identity); the challenge is burned
+— replaying it returns 400. A 503 means the node was unreachable and
+**nothing was consumed**: retry the same nonce. Full reference and the
+error/lockout table: [docs/API.md](docs/API.md).
+
 ### Receive webhooks
 
 ```json
