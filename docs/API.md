@@ -268,3 +268,6 @@ challenge is consumed; replaying it returns 400.
   all callers share the proxy's IP unless you enable `--proxy-headers`.
 - **Sessions are yours**: mint your own cookie/token on a 200. This API only
   verifies possession of the wallet's signing key.
+- **One gateway, many sites**: every site you run can authenticate wallet
+  logins against this one verifier. Give each site its **own** auth key — a
+  leaked key revokes just that site, no shared secret to rotate everywhere.
