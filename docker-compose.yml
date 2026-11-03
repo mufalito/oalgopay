@@ -2,8 +2,12 @@ name: oalgopay
 
 services:
   core:
-    build: .
-    image: oalgopay
+    build:
+      context: .
+      args:
+        # bake the running version into the image (logs print it at startup):
+        # OALGOPAY_VERSION="$(git describe --tags --always --dirty)" docker compose build
+        OALGOPAY_VERSION: ${OALGOPAY_VERSION:-unknown}
     restart: unless-stopped
     entrypoint: ["/app/bin/blocknet-core-amd64-linux"]
     command: ["--api", "0.0.0.0:18512", "--data", "/app/data/blocknet"]
@@ -22,9 +26,13 @@ services:
       # the compose network is private; the wizard must stay reachable
       # through the published port, so it may bind all interfaces unconfigured
       OALGOPAY_UNCONFIGURED_BIND: 0.0.0.0
+      # opt-in wallet auto-reload after core restarts (which unload the
+      # wallet) — mount the password file read-only and uncomment:
+      # OALGOPAY_WALLET_PASSWORD_FILE: /run/secrets/wallet.pw
     volumes:
       - oalgopay-data:/app/data          # shared: api.cookie + chain live here
       - ./config.json:/app/config.json   # cp config.example.json config.json first
+      # - ./wallets/shop.wallet.pw:/run/secrets/wallet.pw:ro
     ports:
       - "8096:8096"
 

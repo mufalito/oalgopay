@@ -15,6 +15,7 @@ RUN curl -sLO "https://github.com/blocknetprivacy/core/releases/download/v${CORE
 
 # ---- stage 2: the app --------------------------------------------------------
 FROM python:3.14-slim
+ARG OALGOPAY_VERSION=unknown
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
@@ -24,6 +25,7 @@ COPY bin/README.md ./bin/README.md
 COPY run.py config.example.json ./
 COPY --from=core /tmp/blocknet-core-amd64-linux ./bin/blocknet-core-amd64-linux
 ENV OALGOPAY_API_BASE=http://core:18512 \
-    OALGOPAY_DATADIR=/app/data/blocknet
+    OALGOPAY_DATADIR=/app/data/blocknet \
+    OALGOPAY_VERSION=${OALGOPAY_VERSION}
 EXPOSE 8096
 CMD ["uv", "run", "--no-dev", "run.py"]

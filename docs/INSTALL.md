@@ -177,6 +177,12 @@ journalctl --user -u oalgopay -f
    in place. The first log line also prints the exact version running
    (`git describe` when deployed from a checkout).
 
+**Wallet note:** any core restart unloads the wallet — payment watching only
+resumes after a reload (admin panel → Overview → **Load wallet**), or
+automatically when `OALGOPAY_WALLET_PASSWORD_FILE` is set — see
+[DOCKER.md](DOCKER.md#unattended-wallet-reload-optional) for the opt-in and
+its trade-offs.
+
 ## Troubleshooting
 
 | Symptom | Meaning / fix |

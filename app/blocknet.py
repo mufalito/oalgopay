@@ -2,9 +2,10 @@
 
 ALL node interaction goes through BlocknetClient. The gateway holds no wallet
 credentials: the only exception is wallet_load(), a one-shot pass-through
-invoked exclusively by explicit user action (setup wizard / admin reload) —
-the password is forwarded to the core and discarded. On 401 the cookie is
-re-read once and the request retried once (daemon restarts regenerate it).
+invoked by explicit user action (setup wizard / admin reload) or the opt-in
+OALGOPAY_WALLET_PASSWORD_FILE auto-loader — the password is forwarded to the
+core and discarded. On 401 the cookie is re-read once and the request
+retried once (daemon restarts regenerate it).
 """
 from __future__ import annotations
 

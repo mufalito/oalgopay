@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -25,8 +26,11 @@ APP_VERSION = "0.1.0"
 
 
 def _deploy_version() -> str:
-    """APP_VERSION, plus `git describe` when running from a git checkout —
-    makes "what is running" answerable from the logs alone."""
+    """What is running: OALGOPAY_VERSION env (baked into the Docker image),
+    else APP_VERSION plus `git describe` when running from a git checkout."""
+    env = os.environ.get("OALGOPAY_VERSION", "")
+    if env:
+        return env
     try:
         import subprocess
 

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import os
 import time
+from pathlib import Path
 from typing import Any
 
 from . import db, invoices, webhooks
@@ -18,6 +21,56 @@ RECONCILE_WINDOW = 2016  # blocks
 PAGE_LIMIT = 100
 
 MATCHABLE_STATUSES = ("pending", "seen", "expired")
+
+# opt-in wallet auto-reload (core restarts unload the wallet): path to a
+# root-only password file; wallet path itself comes from the core's settings
+WALLET_PASSWORD_FILE = os.environ.get("OALGOPAY_WALLET_PASSWORD_FILE", "")
+AUTOLOAD_RETRY_S = 30.0
+
+
+def _core_wallet_file(datadir: str) -> str | None:
+    """The wallet path the core resolves at startup (its settings.json)."""
+    try:
+        settings = json.loads((Path(datadir) / "settings.json").read_text())
+    except (OSError, ValueError):
+        return None
+    path = str(settings.get("wallet_file") or "").strip()
+    return path or None
+
+
+def _autoload_due(state: Any, now: float) -> bool:
+    return now - getattr(state, "wallet_autoload_at", 0.0) >= AUTOLOAD_RETRY_S
+
+
+async def maybe_autoload_wallet(state: Any, error_text: str) -> None:
+    """Reload the wallet when the core reports it unloaded and the operator
+    opted in via OALGOPAY_WALLET_PASSWORD_FILE (read once per attempt, used
+    for a single request, never stored or logged). No-op otherwise."""
+    if not WALLET_PASSWORD_FILE or "no wallet loaded" not in error_text:
+        return
+    now = time.monotonic()
+    if not _autoload_due(state, now):
+        return
+    state.wallet_autoload_at = now
+    datadir = str(getattr(state, "config", {}).get("datadir") or "")
+    wallet_path = _core_wallet_file(datadir)
+    if not wallet_path:
+        log.warning(
+            "wallet auto-load: no wallet_file configured in %s — load once via the wizard/panel first",
+            Path(datadir) / "settings.json",
+        )
+        return
+    try:
+        password = Path(WALLET_PASSWORD_FILE).read_text().strip()
+    except OSError as exc:
+        log.warning("wallet auto-load: cannot read %s: %s", WALLET_PASSWORD_FILE, exc)
+        return
+    try:
+        result = await state.client.wallet_load(wallet_path, password)
+    except BlocknetError as exc:
+        log.warning("wallet auto-load failed: %s", exc)
+        return
+    log.info("wallet auto-loaded (%s) — payment processing resumed", result)
 
 
 def _wallet_outputs(page: dict[str, Any]) -> list[dict[str, Any]]:
@@ -151,6 +204,7 @@ async def reconcile(state: Any) -> None:
         # startup-only caller (sse_loop) announces failures once per episode;
         # the retry loop keeps polling regardless
         log.debug("reconciliation deferred (%s)", exc)
+        await maybe_autoload_wallet(state, str(exc))
 
 
 def expiry_sweep(state: Any) -> None:
@@ -196,6 +250,7 @@ async def sse_loop(state: Any) -> None:
                         state.node_ok = False
                         state.node_error = str(exc)
                         log.warning("poll after new_block failed: %s", exc)
+                        await maybe_autoload_wallet(state, str(exc))
         except Exception as exc:  # stream_events reconnects internally; this is a safety net
             if not backoff_warned:
                 log.warning("SSE consumer error: %s", exc)
@@ -217,6 +272,7 @@ async def poll_loop(state: Any) -> None:
                 log.warning("poll failed: %s", exc)
             else:
                 log.debug("poll failed, core still down: %s", exc)
+            await maybe_autoload_wallet(state, str(exc))
         except Exception:
             log.exception("poll loop error")
 

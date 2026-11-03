@@ -198,8 +198,9 @@ retry/dedupe contract: [docs/WEBHOOKS.md](docs/WEBHOOKS.md).
 ## Security
 
 - The core API stays localhost-bound; the gateway authenticates with the
-  regenerated `api.cookie` and holds **no wallet keys** — it never loads or
-  unlocks wallets.
+  regenerated `api.cookie` and holds **no wallet keys** — wallet loads are
+  explicit (wizard/panel), or the opt-in `OALGOPAY_WALLET_PASSWORD_FILE`
+  auto-reload for unattended core restarts (password used once, never stored).
 - Only the admin panel's Send feature can move coins (admin session required);
   the merchant API is create/read-only.
 - Keep `config.json`, `data/`, and `shop.wallet.*` private (600/0700) — they
@@ -209,7 +210,7 @@ retry/dedupe contract: [docs/WEBHOOKS.md](docs/WEBHOOKS.md).
 ## Tests
 
 ```bash
-uv run python -m unittest          # matcher, confirmation sweep, amounts (pure logic)
+uv run python -m unittest          # or: uv run pytest
 uv run python scripts/e2e_test.py  # real-money end-to-end: pay → seen → confirmed → signed webhooks
 ```
 

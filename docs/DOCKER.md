@@ -46,6 +46,26 @@ core container — use that path in the wizard and the panel's Load-wallet form.
 Later core restarts keep `wallet_file` configured, so loading works without
 the settings step.
 
+### Unattended wallet reload (optional)
+
+Every core restart unloads the wallet — `docker compose up -d --build`
+included — and without help the gateway silently stops watching payments
+until someone loads it via the panel. Opt into auto-reload by mounting the
+password file read-only into the gateway (lines are commented out in
+`docker-compose.yml`):
+
+```yaml
+    environment:
+      OALGOPAY_WALLET_PASSWORD_FILE: /run/secrets/wallet.pw
+    volumes:
+      - ./wallets/shop.wallet.pw:/run/secrets/wallet.pw:ro
+```
+
+When the core reports the wallet unloaded, the gateway reads the password,
+forwards it for a single load request, and never stores or logs it. Keep the
+file owner-only (`chmod 600`). Trade-off: anyone who can read that file can
+load your wallet — treat it like `config.json`.
+
 ## What lives where
 
 | Path (host) | Path (container) | Purpose |
@@ -69,7 +89,7 @@ compose network between the two containers.
 ```bash
 docker compose logs -f gateway          # tail gateway logs
 docker compose restart core             # after wallet_file changes
-docker compose pull && docker compose up -d --build   # upgrade
+OALGOPAY_VERSION="$(git describe --tags --always --dirty)" docker compose up -d --build   # upgrade, version baked into the image + startup log
 docker compose down                     # stop (data persists in the volume)
 docker compose down -v                  # stop AND wipe the volume (chain re-syncs)
 ```
