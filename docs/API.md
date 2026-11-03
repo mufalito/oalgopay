@@ -59,7 +59,7 @@ curl -s -X POST localhost:8096/api/v1/invoices \
   "overpaid": false,
   "underpaid": false,
   "confirmed_at": null,
-  "uri": "blocknet://ULPUe…?amount=0.1&memo=INV-6TJRE4AF",
+  "uri": "blocknet://ADDRESS…?amount=0.1&memo=INV-6TJRE4AF",
   "bntpay_url": "https://bntpay.com/$yourname?amount=0.1&memo=INV-6TJRE4AF",
   "pay_url": "http://localhost:8096/pay/INV-6TJRE4AF",
   "qr_url": "http://localhost:8096/pay/INV-6TJRE4AF/qr.svg",
@@ -179,7 +179,7 @@ PK=…   # payouts API key (admin panel → API keys → Generate, kind: payouts
 # pay out — supply idempotency_key so retries can never double-pay
 curl -s -X POST localhost:8096/api/v1/payouts \
   -H "Authorization: Bearer $PK" -H 'Content-Type: application/json' \
-  -d '{"address":"ULP…","amount_bnt":"1.25","memo":"withdrawal #77",
+  -d '{"address":"ADDRESS…","amount_bnt":"1.25","memo":"withdrawal #77",
        "idempotency_key":"withdraw-77"}'
 # → 201 {"txid": "…", "amount_atomic": 125000000, "fee_atomic": …,
 #         "idempotency_key": "withdraw-77", "replayed": false}
@@ -233,13 +233,13 @@ signature obtained for any other site's challenge can never verify here.
 curl -s -X POST localhost:8096/api/v1/auth/verify \
   -H "Authorization: Bearer $AK" -H 'Content-Type: application/json' \
   -d '{"nonce":"9f86d081884c7d659a2feaa0c55ad015",
-       "address":"ULP…", "signature":"<128 hex chars>"}'
+       "address":"ADDRESS…", "signature":"<128 hex chars>"}'
 ```
 
 `200 OK` — the signature is valid for `address`:
 
 ```json
-{"nonce": "9f86d081884c7d659a2feaa0c55ad015", "address": "ULP…", "verified": true}
+{"nonce": "9f86d081884c7d659a2feaa0c55ad015", "address": "ADDRESS…", "verified": true}
 ```
 
 On a 200, log the user in on your side (`address` is the identity). The

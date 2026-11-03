@@ -70,8 +70,8 @@ class TestAmounts(unittest.TestCase):
 
     def test_uri(self):
         self.assertEqual(
-            invoice_uri("ULPADDR", 10_000_000, "INV-ABC234DE"),
-            "blocknet://ULPADDR?amount=0.1&memo=INV-ABC234DE",
+            invoice_uri("TESTADDR", 10_000_000, "INV-ABC234DE"),
+            "blocknet://TESTADDR?amount=0.1&memo=INV-ABC234DE",
         )
 
 
@@ -280,7 +280,7 @@ class TestInvoiceJson(unittest.TestCase):
         base = {"confirmations_required": "10", "display_handle": "$h"}
         i = inv("INV-AAAAAAAA", 10_000_000, status="seen", paid=4_000_000)
         out = invoice_to_json(i, [], settings=base, public_base_url="http://x:1",
-                              address="ULPADDR", chain_height=100)
+                              address="TESTADDR", chain_height=100)
         self.assertTrue(out["underpaid"])
         self.assertFalse(out["overpaid"])
         self.assertEqual(out["qr_url"], "http://x:1/pay/INV-AAAAAAAA/qr.svg")

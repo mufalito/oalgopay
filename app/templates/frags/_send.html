@@ -9,7 +9,7 @@
   <form class="mb-2 flex flex-wrap gap-2" hx-post="/admin/frag/send" hx-target="#view-send" hx-swap="innerHTML"
         hx-confirm="Send funds now? This spends real BNT."
         hx-disabled-elt="find button">
-    <input name="address" placeholder="recipient address (ULP…)" required class="input flex-[2_1_16rem]">
+    <input name="address" placeholder="recipient address (ADDRESS…)" required class="input flex-[2_1_16rem]">
     <input name="amount_bnt" placeholder="amount (BNT)" inputmode="decimal" required class="input w-32">
     <input name="memo" placeholder="memo (optional)" class="input flex-1">
     <button class="btn btn-primary" type="submit">Send</button>

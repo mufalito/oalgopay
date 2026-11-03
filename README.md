@@ -106,7 +106,7 @@ PK=…   # payouts API key (admin panel → API keys → kind: payouts)
 
 curl -s -X POST localhost:8096/api/v1/payouts \
   -H "Authorization: Bearer $PK" -H 'Content-Type: application/json' \
-  -d '{"address":"ULP…", "amount_bnt":"1.25", "memo":"withdrawal #77",
+  -d '{"address":"ADDRESS…", "amount_bnt":"1.25", "memo":"withdrawal #77",
        "idempotency_key":"withdraw-77"}'
 ```
 
@@ -154,11 +154,11 @@ curl -s -X POST localhost:8096/api/v1/auth/challenge -H "Authorization: Bearer $
 # 3. verify the address+signature pair they hand back
 curl -s -X POST localhost:8096/api/v1/auth/verify \
   -H "Authorization: Bearer $AK" -H 'Content-Type: application/json' \
-  -d '{"nonce":"9f86d081…", "address":"ULP…", "signature":"<128 hex chars>"}'
+  -d '{"nonce":"9f86d081…", "address":"ADDRESS…", "signature":"<128 hex chars>"}'
 ```
 
 ```json
-{"nonce": "9f86d081…", "address": "ULP…", "verified": true}
+{"nonce": "9f86d081…", "address": "ADDRESS…", "verified": true}
 ```
 
 **The `oalgopay:login:<nonce>` message is what blocks replay** — the nonce is

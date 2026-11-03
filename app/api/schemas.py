@@ -125,7 +125,7 @@ class WebhookOut(BaseModel):
 class SendRequest(BaseModel):
     """Manual payout/refund. Exactly one of amount_bnt / amount_atomic."""
 
-    address: str = Field(min_length=8, description="recipient address (ULP…)")
+    address: str = Field(min_length=8, description="recipient address (ADDRESS…)")
     amount_bnt: str | float | None = Field(default=None, description="decimal BNT, ≤ 8 dp")
     amount_atomic: int | None = Field(default=None, gt=0, description="atomic units (1 BNT = 1e8)")
     memo: str | None = Field(default=None, max_length=200)

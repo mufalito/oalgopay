@@ -51,7 +51,7 @@ async def index():
       <h1>Payout Dashboard</h1>
       <h2>Send a payout</h2>
       <form action="/payout" method="post">
-        <input name="address" placeholder="recipient (ULP…)" style="width:100%;padding:0.5rem;margin:0.3rem 0" required>
+        <input name="address" placeholder="recipient address (ADDRESS…)" style="width:100%;padding:0.5rem;margin:0.3rem 0" required>
         <input name="amount" placeholder="amount (BNT)" style="padding:0.5rem;margin:0.3rem 0" required>
         <input name="memo" placeholder="memo (optional)" style="padding:0.5rem;margin:0.3rem 0">
         <input name="idempotency_key" placeholder="idempotency key (e.g. withdraw-123)" style="padding:0.5rem;margin:0.3rem 0;width:100%" required>
