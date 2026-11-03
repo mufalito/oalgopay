@@ -171,8 +171,13 @@ class BlocknetClient:
         """Yield (event, data) tuples from the daemon SSE stream (/api/events).
 
         Reconnects forever with 5s -> 60s backoff; yields nothing while down.
+        Logs one line per outage episode: INFO "waiting for core" while the
+        core was never reached (startup race), a single WARNING when an
+        established stream drops, DEBUG for repeats, INFO on (re)connect.
         """
         backoff = 5.0
+        connected_once = False
+        warned = False
         while True:
             try:
                 if self._cookie is None:
@@ -188,6 +193,9 @@ class BlocknetClient:
                         continue
                     resp.raise_for_status()
                     backoff = 5.0
+                    if warned or not connected_once:
+                        log.info("event stream connected (%s)", self.api_base)
+                    connected_once, warned = True, False
                     event = "message"
                     data_lines: list[str] = []
                     async for line in resp.aiter_lines():
@@ -205,6 +213,13 @@ class BlocknetClient:
                         elif line.startswith("data:"):
                             data_lines.append(line[5:].strip())
             except (httpx.HTTPError, BlocknetError) as exc:
-                log.warning("SSE stream lost (%s); reconnecting in %.0fs", exc, backoff)
+                if not warned:
+                    if connected_once:
+                        log.warning("event stream lost (%s); reconnecting with backoff", exc)
+                    else:
+                        log.info("waiting for core at %s (%s); retrying with backoff", self.api_base, exc)
+                    warned = True
+                else:
+                    log.debug("event stream still down (%s)", exc)
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 60.0)

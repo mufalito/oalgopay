@@ -148,7 +148,9 @@ async def reconcile(state: Any) -> None:
     except BlocknetError as exc:
         state.node_ok = False
         state.node_error = str(exc)
-        log.warning("reconciliation failed: %s", exc)
+        # startup-only caller (sse_loop) announces failures once per episode;
+        # the retry loop keeps polling regardless
+        log.debug("reconciliation deferred (%s)", exc)
 
 
 def expiry_sweep(state: Any) -> None:
@@ -165,7 +167,18 @@ def expiry_sweep(state: Any) -> None:
 
 async def sse_loop(state: Any) -> None:
     """Consume daemon SSE; on new_block run a matcher pass. Also drives initial reconcile."""
-    await reconcile(state)
+    # Retry the startup reconciliation until the core is actually reachable:
+    # booting before the core (same host, restart race) must not silently
+    # skip the catch-up of payments that arrived while the gateway was down.
+    waited = False
+    while not state.node_ok:
+        await reconcile(state)
+        if state.node_ok:
+            break
+        if not waited:
+            log.info("core not ready (%s); startup reconciliation deferred, retrying every 5s", state.node_error)
+            waited = True
+        await asyncio.sleep(5.0)
     backoff_warned = False
     while True:
         try:
@@ -197,9 +210,13 @@ async def poll_loop(state: Any) -> None:
         try:
             await poll_wallet(state)
         except BlocknetError as exc:
+            was_ok = state.node_ok
             state.node_ok = False
             state.node_error = str(exc)
-            log.warning("poll failed: %s", exc)
+            if was_ok:
+                log.warning("poll failed: %s", exc)
+            else:
+                log.debug("poll failed, core still down: %s", exc)
         except Exception:
             log.exception("poll loop error")
 

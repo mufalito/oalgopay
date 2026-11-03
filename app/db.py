@@ -1,11 +1,14 @@
 """SQLite access layer. All SQL in the gateway lives here (WAL, foreign_keys=ON)."""
 from __future__ import annotations
 
+import logging
 import sqlite3
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
+
+log = logging.getLogger("oalgopay.db")
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
@@ -116,14 +119,7 @@ def connect(path: str | Path) -> sqlite3.Connection:
     _conn.execute("PRAGMA journal_mode=WAL")
     _conn.execute("PRAGMA foreign_keys=ON")
     _conn.executescript(SCHEMA)
-    # lightweight migrations for pre-existing databases
-    _inv_cols = {r[1] for r in _conn.execute("PRAGMA table_info(invoices)")}
-    if "created_height" not in _inv_cols:
-        _conn.execute("ALTER TABLE invoices ADD COLUMN created_height INTEGER NOT NULL DEFAULT 0")
-    _cols = {r[1] for r in _conn.execute("PRAGMA table_info(webhook_deliveries)")}
-    for _col, _decl in (("event_id", "TEXT"), ("previous_status", "TEXT")):
-        if _col not in _cols:
-            _conn.execute(f"ALTER TABLE webhook_deliveries ADD COLUMN {_col} {_decl}")
+    _migrate()
     for key, value in DEFAULT_SETTINGS.items():
         _conn.execute("INSERT OR IGNORE INTO settings(key, value) VALUES(?, ?)", (key, value))
     return _conn
@@ -448,3 +444,51 @@ def sweep_auth_challenges(now: int, challenge_ttl: int, lockout_window: int) -> 
         (now - challenge_ttl,),
     )
     execute("DELETE FROM auth_attempts WHERE created_at < ?", (now - lockout_window,))
+
+
+# --- versioned migrations -----------------------------------------------------
+# The base SCHEMA above is idempotent (CREATE IF NOT EXISTS) and represents
+# the CURRENT shape — fresh databases get everything from it. These numbered
+# steps bring OLDER databases forward. Version 1 is the baseline (any database
+# the base SCHEMA can create is already there — nothing to do). For the next
+# schema change: add a step, bump SCHEMA_VERSION, never edit old steps.
+
+def _migration_2() -> None:
+    """Normalize databases from before versioned migrations existed: add the
+    columns those deployments predate (no-ops on current databases)."""
+    conn = db()
+    inv_cols = {r[1] for r in conn.execute("PRAGMA table_info(invoices)")}
+    if "created_height" not in inv_cols:
+        conn.execute("ALTER TABLE invoices ADD COLUMN created_height INTEGER NOT NULL DEFAULT 0")
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(webhook_deliveries)")}
+    for col, decl in (("event_id", "TEXT"), ("previous_status", "TEXT")):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE webhook_deliveries ADD COLUMN {col} {decl}")
+
+
+_MIGRATIONS: dict[int, Callable[[], None]] = {
+    2: _migration_2,
+}
+
+# versions must be contiguous from 2 (range() below assumes no gaps)
+SCHEMA_VERSION = max(_MIGRATIONS, default=1)
+
+
+def _migrate() -> None:
+    """Apply pending schema migrations once, recording each in schema_migrations."""
+    conn = db()
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations ("
+        "version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL)"
+    )
+    applied = {r[0] for r in conn.execute("SELECT version FROM schema_migrations")}
+    for version in range(1, SCHEMA_VERSION + 1):
+        if version in applied:
+            continue
+        if version > 1:
+            _MIGRATIONS[version]()
+            log.info("applied database migration v%d", version)
+        conn.execute(
+            "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
+            (version, int(time.time())),
+        )

@@ -171,8 +171,11 @@ journalctl --user -u oalgopay -f
    stop `oalgopay-core`, replace the binary, start again. **Match the core
    version to the chain db format** — check the release notes of
    `blocknetprivacy/core` before jumping versions.
-4. Start the gateway. Schema migrations run automatically on boot
-   (`CREATE TABLE IF NOT EXISTS …`).
+4. Start the gateway. Schema migrations run automatically on boot: the
+   idempotent base schema brings fresh databases current, and versioned
+   steps (recorded in the `schema_migrations` table) alter older databases
+   in place. The first log line also prints the exact version running
+   (`git describe` when deployed from a checkout).
 
 ## Troubleshooting
 

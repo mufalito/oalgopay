@@ -21,6 +21,27 @@ logging.basicConfig(
 )
 log = logging.getLogger("oalgopay")
 
+APP_VERSION = "0.1.0"
+
+
+def _deploy_version() -> str:
+    """APP_VERSION, plus `git describe` when running from a git checkout —
+    makes "what is running" answerable from the logs alone."""
+    try:
+        import subprocess
+
+        out = subprocess.run(
+            ["git", "describe", "--tags", "--always", "--dirty"],
+            capture_output=True, text=True, timeout=5,
+            cwd=Path(__file__).resolve().parent.parent,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return f"{APP_VERSION}+{out.stdout.strip()}"
+    except Exception:
+        pass
+    return APP_VERSION
+
+
 
 def _seed_api_keys(cfg: dict) -> None:
     """One-time: import config-borne credentials into the revocable api_keys
@@ -46,7 +67,7 @@ def create_app(cfg: dict) -> FastAPI:
     async def lifespan(app: FastAPI):
         tasks = watcher.start(app.state)
         tasks.append(asyncio.create_task(webhooks.worker_loop(app.state), name="webhook-worker"))
-        log.info("OalgoPay up on %s:%s", cfg["host"], cfg["port"])
+        log.info("OalgoPay %s up on %s:%s", _deploy_version(), cfg["host"], cfg["port"])
         try:
             yield
         finally:
@@ -66,7 +87,7 @@ def create_app(cfg: dict) -> FastAPI:
             "Written guides live in the repository's docs/ directory "
             "(API.md, WEBHOOKS.md, ADMIN.md, INSTALL.md). Admin panel: /admin."
         ),
-        version="0.1.0",
+        version=APP_VERSION,
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url="/redoc",
