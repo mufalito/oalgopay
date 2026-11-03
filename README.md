@@ -47,7 +47,8 @@ Blocknet core (headless) ──api.cookie──▶ watcher (SSE + poll) ──�
 | **Admin panel** | node/wallet/handle health, invoice CRUD + manual confirm, webhook management + delivery log, manual payouts with audit trail, API key management, live settings |
 | **Setup wizard** | first run at `/setup`: detects your core, live-tests the connection, generates secrets — no config editing required |
 | **Payouts API** | separate payouts key + `POST /api/v1/payouts` with client idempotency keys — retry-safe automation that can never double-pay |
-| **API keys** | panel-managed merchant/payouts credentials — hashed at rest, revocable, shown once; kind isolation (invoice keys ≠ coin-movement keys) |
+| **Sign-in API** | `auth` key + `POST /api/v1/auth/challenge|verify` — "Sign in with Blocknet wallet" for your other services, without hosting their own node |
+| **API keys** | panel-managed merchant/payouts/auth credentials — hashed at rest, revocable, shown once; kind isolation (invoice keys ≠ coin-movement keys ≠ sign-in keys) |
 | **API docs** | OpenAPI at `/docs` + `/redoc`, typed schemas, working Authorize button |
 | **Examples** | three FastAPI demos in `examples/` — digital goods shop, API credit top-up, automated payouts |
 | **Self-contained** | one directory: app, core binary, chain data, wallet. Nothing phones home. |

@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS payouts (
 );
 CREATE TABLE IF NOT EXISTS api_keys (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind TEXT NOT NULL,             -- 'merchant' | 'payouts'
+    kind TEXT NOT NULL,             -- 'merchant' | 'payouts' | 'auth'
     name TEXT NOT NULL,
     key_hash TEXT NOT NULL UNIQUE,  -- sha256 hex of the full key
     prefix TEXT NOT NULL,           -- first chars, for display
@@ -86,6 +86,16 @@ CREATE TABLE IF NOT EXISTS api_keys (
 CREATE INDEX IF NOT EXISTS idx_api_keys_lookup ON api_keys(kind, key_hash);
 CREATE INDEX IF NOT EXISTS idx_invoices_created ON invoices(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice_matched ON payments(invoice_id, matched_at);
+CREATE TABLE IF NOT EXISTS auth_challenges (
+    nonce TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    used_at INTEGER
+);
+CREATE TABLE IF NOT EXISTS auth_attempts (
+    ip TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_auth_attempts_lookup ON auth_attempts(ip, created_at);
 """
 
 DEFAULT_SETTINGS: dict[str, str] = {
@@ -390,3 +400,51 @@ def has_active_api_keys(kind: str) -> bool:
     return query_one(
         "SELECT 1 FROM api_keys WHERE kind = ? AND revoked_at IS NULL LIMIT 1", (kind,)
     ) is not None
+
+
+# --- wallet sign-in challenges ------------------------------------------------
+
+def create_auth_challenge(nonce: str, now: int) -> None:
+    """INSERT OR IGNORE (nonce is PK; collision astronomically unlikely)."""
+    execute(
+        "INSERT OR IGNORE INTO auth_challenges (nonce, created_at) VALUES (?, ?)",
+        (nonce, now),
+    )
+
+
+def get_auth_challenge(nonce: str) -> dict[str, Any] | None:
+    return query_one("SELECT * FROM auth_challenges WHERE nonce = ?", (nonce,))
+
+
+def consume_auth_challenge(nonce: str, now: int) -> bool:
+    """Atomically mark a challenge used; False if already used or missing."""
+    cur = execute(
+        "UPDATE auth_challenges SET used_at = ? WHERE nonce = ? AND used_at IS NULL",
+        (now, nonce),
+    )
+    return cur.rowcount > 0
+
+
+def record_auth_failure(ip: str, now: int) -> None:
+    execute("INSERT INTO auth_attempts (ip, created_at) VALUES (?, ?)", (ip, now))
+
+
+def count_recent_auth_failures(ip: str, window_start: int) -> int:
+    row = query_one(
+        "SELECT COUNT(*) AS n FROM auth_attempts WHERE ip = ? AND created_at >= ?",
+        (ip, window_start),
+    )
+    return int(row["n"]) if row else 0
+
+
+def clear_auth_failures(ip: str) -> None:
+    execute("DELETE FROM auth_attempts WHERE ip = ?", (ip,))
+
+
+def sweep_auth_challenges(now: int, challenge_ttl: int, lockout_window: int) -> None:
+    """Issue-time cleanup: drop used/expired challenges and stale lockout attempts."""
+    execute(
+        "DELETE FROM auth_challenges WHERE used_at IS NOT NULL OR created_at < ?",
+        (now - challenge_ttl,),
+    )
+    execute("DELETE FROM auth_attempts WHERE created_at < ?", (now - lockout_window,))

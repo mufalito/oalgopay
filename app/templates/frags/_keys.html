@@ -12,6 +12,7 @@
   <select name="kind" class="input w-44">
     <option value="merchant">merchant — create invoices</option>
     <option value="payouts">payouts — move coins</option>
+    <option value="auth">auth — wallet sign-in verification</option>
   </select>
   <button class="btn btn-primary" type="submit">Generate key</button>
 </form>
@@ -19,7 +20,9 @@
   Keys are stored hashed (sha256) and can be revoked any time — revocation is
   immediate. Generate a replacement first, deploy it, then revoke the old one
   for zero-downtime rotation. Payouts keys are the only credentials that can
-  move coins via <span class="font-mono">/api/v1/payouts</span>.
+  move coins via <span class="font-mono">/api/v1/payouts</span>. Auth keys
+  let other services verify Blocknet wallet sign-ins via
+  <span class="font-mono">/api/v1/auth/*</span>.
 </p>
 
 <div class="overflow-x-auto rounded-lg border border-slate-200">
@@ -41,6 +44,7 @@
       <td class="px-4 py-2.5">{{ k.id }}</td>
       <td class="px-4 py-2.5">
         {% if k.kind == 'payouts' %}<span class="status-badge" data-status="pending">payouts</span>
+        {% elif k.kind == 'auth' %}<span class="status-badge" data-status="confirmed">auth</span>
         {% else %}<span class="status-badge" data-status="seen">merchant</span>{% endif %}
       </td>
       <td class="px-4 py-2.5">{{ k.name }}</td>

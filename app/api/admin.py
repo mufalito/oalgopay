@@ -497,8 +497,8 @@ async def frag_create_key(request: Request):
     params = await body_params(request)
     name = str(params.get("name", "")).strip() or "unnamed"
     kind = str(params.get("kind", ""))
-    if kind not in ("merchant", "payouts"):
-        return frag(request, "frags/_keys.html", {"keys": db.list_api_keys(), "new_key": None, "error": "kind must be merchant or payouts"})
+    if kind not in ("merchant", "payouts", "auth"):
+        return frag(request, "frags/_keys.html", {"keys": db.list_api_keys(), "new_key": None, "error": "kind must be merchant, payouts or auth"})
     import secrets as _secrets
 
     full_key = f"{kind}_" + _secrets.token_hex(24)

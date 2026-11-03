@@ -180,3 +180,23 @@ class PayoutCreatedOut(SendResult):
     id: int
     idempotency_key: str
     replayed: bool = Field(description="true when an existing payout was returned (no new send)")
+
+
+class SigninChallengeOut(BaseModel):
+    nonce: str = Field(description="single-use challenge id")
+    message: str = Field(description="string the wallet must sign")
+    expires_at: int = Field(description="unix seconds; challenge valid until then")
+
+
+class SigninVerifyRequest(BaseModel):
+    """Bounds are hygiene only — the node is the sole address/signature validator."""
+
+    nonce: str = Field(min_length=8, max_length=64)
+    address: str = Field(min_length=8, max_length=160)
+    signature: str = Field(min_length=64, max_length=256)
+
+
+class SigninVerifiedOut(BaseModel):
+    nonce: str
+    address: str
+    verified: bool = Field(description="true when the node confirmed the signature")

@@ -43,8 +43,12 @@ class BlocknetClient:
             raise BlocknetError(f"cannot read api.cookie at {self.cookie_path}: {exc}", "auth") from exc
 
     async def _request(
-        self, method: str, path: str, *, json_body: Any = None, headers: dict[str, str] | None = None
+        self, method: str, path: str, *, json_body: Any = None,
+        headers: dict[str, str] | None = None, timeout: float | None = None
     ) -> Any:
+        # NB: passing timeout=None to httpx DISABLES the timeout instead of
+        # using the client default — only send the kwarg when provided.
+        to = {} if timeout is None else {"timeout": timeout}
         for attempt in (0, 1):
             if self._cookie is None:
                 self._cookie = self._read_cookie()
@@ -52,7 +56,7 @@ class BlocknetClient:
             if headers:
                 hdrs.update(headers)
             try:
-                resp = await self._http.request(method, path, json=json_body, headers=hdrs)
+                resp = await self._http.request(method, path, json=json_body, headers=hdrs, **to)
             except httpx.HTTPError as exc:
                 raise BlocknetError(f"daemon unreachable: {exc}", "unreachable") from exc
             if resp.status_code == 401 and attempt == 0:
@@ -77,6 +81,18 @@ class BlocknetClient:
 
     async def get_status(self) -> dict[str, Any]:
         return await self._request("GET", "/api/status")
+
+    async def verify_message(self, address: str, message: str, signature: str) -> bool:
+        """Proxy the core's public /api/verify. Returns the node's boolean
+        verdict; raises BlocknetError for 4xx/5xx (400 = definite malformed-
+        input rejection, 429 = rate limit). Timeout 5 s per observed node
+        behaviour."""
+        data = await self._request(
+            "POST", "/api/verify",
+            json_body={"address": address, "message": message, "signature": signature},
+            timeout=5.0,
+        )
+        return bool(data.get("valid"))
 
     def _ensure_wallet_file_setting(self, wallet_path: str) -> None:
         """Point the core's settings.json wallet_file at wallet_path.
