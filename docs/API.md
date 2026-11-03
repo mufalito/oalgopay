@@ -77,9 +77,10 @@ Field notes:
 - `payments[]` — grows as outputs are matched; `paid_atomic` / `paid_bnt` are
   the **aggregate sum** across all matched payments (partials supported;
   `underpaid: true` while 0 < paid < amount). Each entry:
-  `{txid, output_index, amount_atomic, amount_bnt, block_height,
+  `{txid, tx_url, output_index, amount_atomic, amount_bnt, block_height,
   confirmations, matched_at, match_method}` with `match_method` ∈
-  `memo` | `amount`.
+  `memo` | `amount`; `tx_url` points at the public blocknet explorer
+  ([explorer.blocknetcrypto.com](https://explorer.blocknetcrypto.com)).
 
 ## List invoices — `GET /api/v1/invoices`
 
@@ -136,7 +137,7 @@ Used by the hosted pay page; safe for integrations.
   "overpaid": false,
   "underpaid": false,
   "payments": [
-    {"txid": "2e507498…", "amount_atomic": 10000000, "amount_bnt": "0.1", "confirmations": 3}
+    {"txid": "2e507498…", "tx_url": "https://explorer.blocknetcrypto.com/tx/2e507498…", "amount_atomic": 10000000, "amount_bnt": "0.1", "confirmations": 3}
   ]
 }
 ```

@@ -2,7 +2,7 @@
 {% if result %}
 <div class="banner-ok mb-4">
   Sent {{ fmt_bnt(result.amount_atomic) }} BNT to {{ result.address[:20] }}…<br>
-  txid <span class="font-mono">{{ result.txid }}</span>{% if result.fee_atomic %} · fee {{ fmt_bnt(result.fee_atomic) }} BNT{% endif %}
+  txid <a href="{{ explorer_tx_url(result.txid) }}" target="_blank" rel="noopener" class="font-mono text-brand-700 hover:underline">{{ result.txid }}</a>{% if result.fee_atomic %} · fee {{ fmt_bnt(result.fee_atomic) }} BNT{% endif %}
 </div>
 {% endif %}
 <div id="send-frag">
@@ -42,7 +42,7 @@
         <td class="px-4 py-2.5 font-mono">{{ fmt_bnt(p.amount_atomic) }}</td>
         <td class="px-4 py-2.5 font-mono text-slate-500">{% if p.fee_atomic %}{{ fmt_bnt(p.fee_atomic) }}{% else %}—{% endif %}</td>
         <td class="px-4 py-2.5 text-slate-500">{{ p.memo or "—" }}</td>
-        <td class="px-4 py-2.5">{% if p.txid %}<span class="font-mono text-xs text-brand-700" title="{{ p.txid }}">{{ p.txid[:14] }}…</span>{% else %}<span class="text-peach-700">{{ p.error or "pending" }}</span>{% endif %}</td>
+        <td class="px-4 py-2.5">{% if p.txid %}<a href="{{ explorer_tx_url(p.txid) }}" target="_blank" rel="noopener" class="font-mono text-xs text-brand-700 hover:underline" title="{{ p.txid }}">{{ p.txid[:14] }}…</a>{% else %}<span class="text-peach-700">{{ p.error or "pending" }}</span>{% endif %}</td>
       </tr>
       {% else %}
       <tr><td colspan="7" class="px-4 py-6 text-center text-slate-400">no sends yet</td></tr>

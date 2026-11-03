@@ -286,6 +286,20 @@ class TestInvoiceJson(unittest.TestCase):
         self.assertEqual(out["qr_url"], "http://x:1/pay/INV-AAAAAAAA/qr.svg")
         self.assertEqual(out["pay_url"], "http://x:1/pay/INV-AAAAAAAA")
 
+    def test_payments_carry_explorer_tx_url(self):
+        from app.invoices import invoice_to_json
+        base = {"confirmations_required": "10", "display_handle": ""}
+        i = inv("INV-AAAAAAAA", 10_000_000, status="seen", paid=4_000_000)
+        pay = {"txid": "19c6e0764e31ad1e5e7482e37841681b45dc6af407fe9cba2428aa1444c4ff3b",
+               "output_index": 0, "amount_atomic": 4_000_000, "block_height": 90,
+               "matched_at": NOW, "match_method": "memo"}
+        out = invoice_to_json(i, [pay], settings=base, public_base_url="http://x:1",
+                              address="TESTADDR", chain_height=100)
+        self.assertEqual(
+            out["payments"][0]["tx_url"],
+            "https://explorer.blocknetcrypto.com/tx/19c6e0764e31ad1e5e7482e37841681b45dc6af407fe9cba2428aa1444c4ff3b",
+        )
+
     def test_flags_fully_paid_and_unpaid(self):
         from app.invoices import invoice_to_json
         base = {"confirmations_required": "10", "display_handle": ""}

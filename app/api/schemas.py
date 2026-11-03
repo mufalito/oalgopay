@@ -43,6 +43,7 @@ class InvoiceCreateRequest(BaseModel):
 
 class PaymentOut(BaseModel):
     txid: str
+    tx_url: str = Field(description="blocknet explorer page for this transaction")
     output_index: int
     amount_atomic: int
     amount_bnt: str
@@ -84,6 +85,7 @@ class InvoiceListOut(BaseModel):
 
 class PayStatusPayment(BaseModel):
     txid: str
+    tx_url: str = Field(description="blocknet explorer page for this transaction")
     amount_atomic: int
     amount_bnt: str
     confirmations: int

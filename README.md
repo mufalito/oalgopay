@@ -41,7 +41,7 @@ Blocknet core (headless) ──api.cookie──▶ watcher (SSE + poll) ──�
 | | |
 |---|---|
 | **Invoices** | `INV-` ids double as payment memos; BNT or atomic amounts (≤ 8 dp); labels + arbitrary metadata; forward-only lifecycle `pending → seen → confirmed` (+ `expired`, `cancelled`) |
-| **Pay page** | QR of the `blocknet://` URI, copy buttons, live status, countdown, "Open in Wallet", bntpay.com link — htmx-polled, no page reloads |
+| **Pay page** | QR of the `blocknet://` URI, copy buttons, live status, countdown, "Open in Wallet", bntpay.com link, blocknet explorer links on payments — htmx-polled, no page reloads |
 | **Matching** | memo-first; optional exact-amount fallback (oldest unpaid invoice); idempotent by txid+output; overpaid / underpaid / late-payment flags |
 | **Webhooks** | `payment.seen`, `invoice.confirmed`, `invoice.expired` (+ manual resend, test pings); `event_id` for dedupe, `previous_status` for transitions; HMAC-SHA256 signatures with timestamp binding; retries 30 s → 2 h |
 | **Admin panel** | node/wallet/handle health, invoice CRUD + manual confirm, webhook management + delivery log, manual payouts with audit trail, API key management, live settings |

@@ -100,6 +100,13 @@ def bntpay_url(display_handle: str, address: str, amount_atomic: int, memo: str)
     target = display_handle if display_handle else address
     return f"https://bntpay.com/{quote(target, safe='$')}?amount={format_bnt(amount_atomic)}&memo={quote(memo, safe='')}"
 
+EXPLORER_BASE = "https://explorer.blocknetcrypto.com"
+
+
+def explorer_tx_url(txid: str) -> str:
+    return f"{EXPLORER_BASE}/tx/{txid}"
+
+
 
 def invoice_to_json(
     inv: dict[str, Any],
@@ -138,6 +145,7 @@ def invoice_to_json(
         out["payments"] = [
             {
                 "txid": p["txid"],
+                "tx_url": explorer_tx_url(p["txid"]),
                 "output_index": p["output_index"],
                 "amount_atomic": p["amount_atomic"],
                 "amount_bnt": format_bnt(p["amount_atomic"]),

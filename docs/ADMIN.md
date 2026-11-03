@@ -43,7 +43,8 @@ Live dashboard, refreshed on visit:
 - **Row click** — opens a centered **modal** (no scrolling) with the full
   invoice data: status, amounts, memo, all URIs (`blocknet://`, pay page,
   bntpay.com, QR), matched payments (`match_method`, block height,
-  confirmations) and webhook delivery history.
+  confirmations — txids link to the blocknet explorer) and webhook delivery
+  history. The Send tab's payout rows link their txids the same way.
 - **Actions** (in the modal, per status):
   - *Cancel* — pending/seen → cancelled (terminal).
   - *Confirm (manual)* — force-confirm; records

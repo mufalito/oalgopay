@@ -171,6 +171,7 @@ templates.env.globals["fmt_time"] = lambda unix: (
     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(unix)) if unix else "—"
 )
 templates.env.globals["fmt_bnt"] = lambda atoms: f"{atoms / 1e8:.8f}".rstrip("0").rstrip(".") or "0"
+templates.env.globals["explorer_tx_url"] = invoices.explorer_tx_url
 
 
 @router.get("/admin/frag/invoices", response_class=HTMLResponse)

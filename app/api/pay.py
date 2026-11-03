@@ -101,6 +101,7 @@ async def _status_view(inv_id: str, request: Request) -> dict:
         "payments": [
             {
                 "txid": p["txid"],
+                "tx_url": invoices.explorer_tx_url(p["txid"]),
                 "amount_atomic": p["amount_atomic"],
                 "amount_bnt": invoices.format_bnt(p["amount_atomic"]),
                 "confirmations": 0 if p["block_height"] == 0 else max(0, chain_height - p["block_height"]),

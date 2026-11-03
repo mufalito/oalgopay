@@ -26,7 +26,7 @@
   <div id="payments" class="mt-4 space-y-2">
     {% for p in inv.payments %}
     <div class="rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-      <div class="break-all font-mono text-slate-600">{{ p.txid }}</div>
+      <div class="break-all font-mono text-slate-600"><a href="{{ p.tx_url }}" target="_blank" rel="noopener" class="text-brand-700 hover:underline">{{ p.txid }}</a></div>
       <div>{{ p.amount_bnt }} BNT ·
         {% if p.confirmations == 0 %}in mempool{% else %}{{ p.confirmations }} conf.{% endif %}
         {% if inv.status == "expired" %} · late (awaiting confirmation){% endif %}
