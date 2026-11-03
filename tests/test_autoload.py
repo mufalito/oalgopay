@@ -9,7 +9,13 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.watcher import AUTOLOAD_RETRY_S, _autoload_due, _core_wallet_file  # noqa: E402
+from app.blocknet import BlocknetError  # noqa: E402
+from app.watcher import (  # noqa: E402
+    AUTOLOAD_RETRY_S,
+    _autoload_due,
+    _core_wallet_file,
+    _wallet_unloaded,
+)
 
 
 class TestCoreWalletFile(unittest.TestCase):
@@ -31,6 +37,22 @@ class TestCoreWalletFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             (Path(td) / "settings.json").write_text('{"wallet_file": "  "}')
             self.assertIsNone(_core_wallet_file(td))
+
+
+class TestWalletUnloaded(unittest.TestCase):
+    def test_matches_core_text(self):
+        self.assertTrue(_wallet_unloaded(
+            BlocknetError("GET /api/wallet/history/page -> 503: no wallet loaded", "error", 503)))
+
+    def test_matches_reworded_message_with_503(self):
+        self.assertTrue(_wallet_unloaded(BlocknetError("GET /x -> 503: wallet gone", "error", 503)))
+
+    def test_matches_text_even_without_status(self):
+        self.assertTrue(_wallet_unloaded(BlocknetError("no wallet loaded", "error", None)))
+
+    def test_other_errors_do_not_trigger(self):
+        self.assertFalse(_wallet_unloaded(BlocknetError("daemon unreachable: …", "unreachable", None)))
+        self.assertFalse(_wallet_unloaded(BlocknetError("bad request", "error", 400)))
 
 
 class TestAutoloadDue(unittest.TestCase):

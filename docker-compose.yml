@@ -8,6 +8,7 @@ services:
         # bake the running version into the image (logs print it at startup):
         # OALGOPAY_VERSION="$(git describe --tags --always --dirty)" docker compose build
         OALGOPAY_VERSION: ${OALGOPAY_VERSION:-unknown}
+    image: oalgopay        # gateway pins this name — keep the tag, or it runs a stale image
     restart: unless-stopped
     entrypoint: ["/app/bin/blocknet-core-amd64-linux"]
     command: ["--api", "0.0.0.0:18512", "--data", "/app/data/blocknet"]

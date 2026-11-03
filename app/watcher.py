@@ -26,6 +26,11 @@ MATCHABLE_STATUSES = ("pending", "seen", "expired")
 # root-only password file; wallet path itself comes from the core's settings
 WALLET_PASSWORD_FILE = os.environ.get("OALGOPAY_WALLET_PASSWORD_FILE", "")
 AUTOLOAD_RETRY_S = 30.0
+# The core signals an unloaded wallet on wallet endpoints as 503 with body
+# "no wallet loaded". Match BOTH text and status so a reworded message (or a
+# changed status) still triggers — a spurious attempt is throttled + harmless.
+WALLET_UNLOADED_TEXT = "no wallet loaded"
+WALLET_UNLOADED_STATUS = 503
 
 
 def _core_wallet_file(datadir: str) -> str | None:
@@ -42,11 +47,15 @@ def _autoload_due(state: Any, now: float) -> bool:
     return now - getattr(state, "wallet_autoload_at", 0.0) >= AUTOLOAD_RETRY_S
 
 
-async def maybe_autoload_wallet(state: Any, error_text: str) -> None:
+def _wallet_unloaded(exc: BlocknetError) -> bool:
+    return WALLET_UNLOADED_TEXT in str(exc) or exc.status == WALLET_UNLOADED_STATUS
+
+
+async def maybe_autoload_wallet(state: Any, exc: BlocknetError) -> None:
     """Reload the wallet when the core reports it unloaded and the operator
     opted in via OALGOPAY_WALLET_PASSWORD_FILE (read once per attempt, used
     for a single request, never stored or logged). No-op otherwise."""
-    if not WALLET_PASSWORD_FILE or "no wallet loaded" not in error_text:
+    if not WALLET_PASSWORD_FILE or not _wallet_unloaded(exc):
         return
     now = time.monotonic()
     if not _autoload_due(state, now):
@@ -204,7 +213,7 @@ async def reconcile(state: Any) -> None:
         # startup-only caller (sse_loop) announces failures once per episode;
         # the retry loop keeps polling regardless
         log.debug("reconciliation deferred (%s)", exc)
-        await maybe_autoload_wallet(state, str(exc))
+        await maybe_autoload_wallet(state, exc)
 
 
 def expiry_sweep(state: Any) -> None:
@@ -250,7 +259,7 @@ async def sse_loop(state: Any) -> None:
                         state.node_ok = False
                         state.node_error = str(exc)
                         log.warning("poll after new_block failed: %s", exc)
-                        await maybe_autoload_wallet(state, str(exc))
+                        await maybe_autoload_wallet(state, exc)
         except Exception as exc:  # stream_events reconnects internally; this is a safety net
             if not backoff_warned:
                 log.warning("SSE consumer error: %s", exc)
@@ -272,7 +281,7 @@ async def poll_loop(state: Any) -> None:
                 log.warning("poll failed: %s", exc)
             else:
                 log.debug("poll failed, core still down: %s", exc)
-            await maybe_autoload_wallet(state, str(exc))
+            await maybe_autoload_wallet(state, exc)
         except Exception:
             log.exception("poll loop error")
 
