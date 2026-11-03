@@ -1,7 +1,7 @@
 {% if error %}<div class="banner-err mb-4">{{ error }}</div>{% endif %}
 {% if result %}
 <div class="banner-ok mb-4">
-  Sent {{ fmt_bnt(result.amount_atomic) }} BNT to {{ result.address[:20] }}…<br>
+  Sent {{ fmt_bnt(result.amount_atomic) }} BNT to <span class="font-mono">{{ result.address[:20] }}…</span><button class="copy-btn ml-1" data-copy="{{ result.address }}">copy</button><br>
   txid <a href="{{ explorer_tx_url(result.txid) }}" target="_blank" rel="noopener" class="font-mono text-brand-700 hover:underline">{{ result.txid }}</a>{% if result.fee_atomic %} · fee {{ fmt_bnt(result.fee_atomic) }} BNT{% endif %}
 </div>
 {% endif %}
@@ -38,7 +38,7 @@
       <tr class="border-b border-slate-100 last:border-0">
         <td class="px-4 py-2.5">{{ p.id }}</td>
         <td class="px-4 py-2.5 text-slate-500">{{ fmt_time(p.created_at) }}</td>
-        <td class="px-4 py-2.5 font-mono text-xs text-slate-600" title="{{ p.address }}">{{ p.address[:16] }}…</td>
+        <td class="px-4 py-2.5"><span class="font-mono text-xs text-slate-600" title="{{ p.address }}">{{ p.address[:16] }}…</span> <button class="copy-btn" data-copy="{{ p.address }}">copy</button></td>
         <td class="px-4 py-2.5 font-mono">{{ fmt_bnt(p.amount_atomic) }}</td>
         <td class="px-4 py-2.5 font-mono text-slate-500">{% if p.fee_atomic %}{{ fmt_bnt(p.fee_atomic) }}{% else %}—{% endif %}</td>
         <td class="px-4 py-2.5 text-slate-500">{{ p.memo or "—" }}</td>

@@ -17,7 +17,7 @@
   <div class="card">
     <h2 class="klabel mb-3">Wallet</h2>
     <div>
-      <div class="kv-row"><span class="kv-k">Address</span><span class="truncate font-mono text-xs text-slate-600">{{ (wallet.address or "")[:28] }}{% if wallet.address %}…{% endif %}</span></div>
+      <div class="kv-row"><span class="kv-k">Address</span><span class="truncate font-mono text-xs text-slate-600">{{ (wallet.address or "")[:28] }}{% if wallet.address %}…</span><button class="copy-btn ml-1" data-copy="{{ wallet.address }}">copy</button>{% else %}</span>{% endif %}</div>
       <div class="kv-row"><span class="kv-k">State</span><span class="{{ 'text-peach-700' if (wallet.locked or wallet.not_loaded) else 'text-mint-700' }}">{% if wallet.not_loaded %}no wallet loaded{% elif wallet.locked %}locked{% else %}unlocked{% endif %}</span></div>
       {% for k, v in fmt_balance(wallet.balance) %}
       <div class="kv-row"><span class="kv-k">{{ k }}</span><span class="font-mono">{{ v }} BNT</span></div>
@@ -39,7 +39,7 @@
     <div>
       <div class="kv-row"><span class="kv-k">Handle</span><span>{{ handle_info.handle }}</span></div>
       <div class="kv-row"><span class="kv-k">Verified</span><span class="{{ 'text-mint-700' if handle_info.verified else 'text-peach-700' }}">{% if handle_info.verified %}✓ signature valid{% else %}unverified ({{ handle_info.error }}){% endif %}</span></div>
-      <div class="kv-row"><span class="kv-k">Address</span><span class="truncate font-mono text-xs text-slate-600">{{ (handle_info.address or "")[:28] }}…</span></div>
+      <div class="kv-row"><span class="kv-k">Address</span><span class="truncate font-mono text-xs text-slate-600">{{ (handle_info.address or "")[:28] }}…</span><button class="copy-btn ml-1" data-copy="{{ handle_info.address }}">copy</button></div>
       <div class="kv-row"><span class="kv-k">Updated</span><span>{{ fmt_time(handle_info.updated_at) }}</span></div>
     </div>
     {% else %}
