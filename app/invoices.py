@@ -13,6 +13,8 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import quote
 
+from .models import Invoice, Payment
+
 ID_PREFIX = "INV-"
 ID_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 ID_LEN = 8
@@ -109,8 +111,8 @@ def explorer_tx_url(txid: str) -> str:
 
 
 def invoice_to_json(
-    inv: dict[str, Any],
-    payments: list[dict[str, Any]],
+    inv: Invoice,
+    payments: list[Payment],
     *,
     settings: dict[str, str],
     public_base_url: str,
@@ -120,43 +122,43 @@ def invoice_to_json(
     confirmations_required = int(settings.get("confirmations_required", "10"))
     handle = settings.get("display_handle", "")
     out = {
-        "id": inv["id"],
-        "status": inv["status"],
-        "amount_atomic": inv["amount_atomic"],
-        "amount_bnt": format_bnt(inv["amount_atomic"]),
-        "memo": inv["memo"],
-        "label": inv["label"],
-        "metadata": inv["metadata"] if isinstance(inv["metadata"], dict) else _maybe_json(inv["metadata"]),
-        "created_at": inv["created_at"],
-        "expires_at": inv["expires_at"],
-        "paid_atomic": inv["paid_atomic"],
-        "paid_bnt": format_bnt(inv["paid_atomic"]),
+        "id": inv.id,
+        "status": inv.status,
+        "amount_atomic": inv.amount_atomic,
+        "amount_bnt": format_bnt(inv.amount_atomic),
+        "memo": inv.memo,
+        "label": inv.label,
+        "metadata": _maybe_json(inv.meta),
+        "created_at": inv.created_at,
+        "expires_at": inv.expires_at,
+        "paid_atomic": inv.paid_atomic,
+        "paid_bnt": format_bnt(inv.paid_atomic),
         "confirmations_required": confirmations_required,
-        "late_payment": bool(inv["late_payment"]),
-        "overpaid": bool(inv["overpaid"]),
-        "underpaid": 0 < inv["paid_atomic"] < inv["amount_atomic"],
-        "confirmed_at": inv["confirmed_at"],
-        "uri": invoice_uri(address, inv["amount_atomic"], inv["memo"]),
-        "bntpay_url": bntpay_url(handle, address, inv["amount_atomic"], inv["memo"]),
-        "pay_url": f"{public_base_url}/pay/{inv['id']}",
-        "qr_url": f"{public_base_url}/pay/{inv['id']}/qr.svg",
+        "late_payment": bool(inv.late_payment),
+        "overpaid": bool(inv.overpaid),
+        "underpaid": 0 < inv.paid_atomic < inv.amount_atomic,
+        "confirmed_at": inv.confirmed_at,
+        "uri": invoice_uri(address, inv.amount_atomic, inv.memo),
+        "bntpay_url": bntpay_url(handle, address, inv.amount_atomic, inv.memo),
+        "pay_url": f"{public_base_url}/pay/{inv.id}",
+        "qr_url": f"{public_base_url}/pay/{inv.id}/qr.svg",
     }
     if payments is not None:
         out["payments"] = [
             {
-                "txid": p["txid"],
-                "tx_url": explorer_tx_url(p["txid"]),
-                "output_index": p["output_index"],
-                "amount_atomic": p["amount_atomic"],
-                "amount_bnt": format_bnt(p["amount_atomic"]),
-                "block_height": p["block_height"],
+                "txid": p.txid,
+                "tx_url": explorer_tx_url(p.txid),
+                "output_index": p.output_index,
+                "amount_atomic": p.amount_atomic,
+                "amount_bnt": format_bnt(p.amount_atomic),
+                "block_height": p.block_height,
                 "confirmations": (
                     0
-                    if p["block_height"] == 0 or not chain_height
-                    else max(0, chain_height - p["block_height"])
+                    if p.block_height == 0 or not chain_height
+                    else max(0, chain_height - p.block_height)
                 ),
-                "matched_at": p["matched_at"],
-                "match_method": p["match_method"],
+                "matched_at": p.matched_at,
+                "match_method": p.match_method,
             }
             for p in payments
         ]
@@ -197,13 +199,18 @@ def _confirmations(block_height: int, chain_height: int) -> int:
 def match_outputs(
     outputs: list[dict[str, Any]],
     chain_height: int,
-    invoices: list[dict[str, Any]],
-    payments_by_invoice: dict[str, list[dict[str, Any]]],
+    invoices: list[Invoice],
+    payments_by_invoice: dict[str, list[Payment]],
     existing_payment_keys: set[tuple[str, int]],
     settings: dict[str, str],
     now: int | None = None,
 ) -> dict[str, Any]:
-    """Pure matcher. Returns {"payments": [...], "invoice_updates": {id: {...}}, "events": [...]}.
+    """Pure matcher over detached entities. Returns
+    {"payments": [Payment…], "invoice_updates": {id: field-dict}, "events": [...]}.
+
+    The invoice entities are scratch state: mutated here, never re-attached —
+    writes go back through the returned field-dicts + db.update_invoice.
+    New payments are detached Payment instances ready for db.insert_payment.
 
     Matching order per output (skipping (txid, output_index) already credited):
       1. memo: decoded memo contains an invoice id whose invoice is
@@ -220,9 +227,9 @@ def match_outputs(
     confirmations_required = int(settings.get("confirmations_required", "10"))
     fallback_enabled = settings.get("amount_fallback_matching", "1") == "1"
 
-    by_id = {inv["id"]: dict(inv) for inv in invoices}
-    pays: dict[str, list[dict[str, Any]]] = {i: [dict(p) for p in ps] for i, ps in payments_by_invoice.items()}
-    new_payments: list[dict[str, Any]] = []
+    by_id = {inv.id: inv for inv in invoices}
+    pays: dict[str, list[Payment]] = {i: list(ps) for i, ps in payments_by_invoice.items()}
+    new_payments: list[Payment] = []
     invoice_updates: dict[str, dict[str, Any]] = {}
     events: list[dict[str, Any]] = []
 
@@ -243,7 +250,7 @@ def match_outputs(
         method = None
 
         memo_inv = find_memo_invoice_id(memo_hex)
-        if memo_inv and memo_inv in by_id and by_id[memo_inv]["status"] in ("pending", "seen", "expired"):
+        if memo_inv and memo_inv in by_id and by_id[memo_inv].status in ("pending", "seen", "expired"):
             target_id, method = memo_inv, "memo"
         elif fallback_enabled and amount > 0:
             # Only match outputs that could not predate the invoice:
@@ -251,56 +258,56 @@ def match_outputs(
             candidates = [
                 inv
                 for inv in by_id.values()
-                if inv["status"] in ACTIVE_STATUSES
-                and inv["amount_atomic"] == amount
-                and inv["paid_atomic"] == 0
-                and (block_height == 0 or block_height >= inv.get("created_height", 0))
+                if inv.status in ACTIVE_STATUSES
+                and inv.amount_atomic == amount
+                and inv.paid_atomic == 0
+                and (block_height == 0 or block_height >= inv.created_height)
             ]
             if candidates:
-                oldest = min(candidates, key=lambda inv: inv["created_at"])
-                target_id, method = oldest["id"], "amount"
+                oldest = min(candidates, key=lambda inv: inv.created_at)
+                target_id, method = oldest.id, "amount"
 
         if not target_id:
             continue
 
-        payment = {
-            "txid": key[0],
-            "output_index": key[1],
-            "invoice_id": target_id,
-            "amount_atomic": amount,
-            "block_height": block_height,
-            "memo_hex": memo_hex,
-            "matched_at": now,
-            "match_method": method,
-        }
+        payment = Payment(
+            txid=key[0],
+            output_index=key[1],
+            invoice_id=target_id,
+            amount_atomic=amount,
+            block_height=block_height,
+            memo_hex=memo_hex,
+            matched_at=now,
+            match_method=method,
+        )
         new_payments.append(payment)
         pays.setdefault(target_id, []).append(payment)
         existing_payment_keys = existing_payment_keys | {key}
 
         inv = by_id[target_id]
-        inv_status_before = inv["status"]
+        inv_status_before = inv.status
         was_expired = inv_status_before == "expired"
         was_confirmed = inv_status_before == "confirmed"
         inv_payments = pays[target_id]
-        paid_total = sum(p["amount_atomic"] for p in inv_payments)
-        confs = min(_confirmations(p["block_height"], chain_height) for p in inv_payments)
-        confirmed = paid_total >= inv["amount_atomic"] and confs >= confirmations_required
+        paid_total = sum(p.amount_atomic for p in inv_payments)
+        confs = min(_confirmations(p.block_height, chain_height) for p in inv_payments)
+        confirmed = paid_total >= inv.amount_atomic and confs >= confirmations_required
 
-        inv["paid_atomic"] = paid_total
+        inv.paid_atomic = paid_total
         fields: dict[str, Any] = {"paid_atomic": paid_total}
         if was_expired:
             fields["late_payment"] = 1
         if not was_confirmed and confirmed:
-            inv["status"] = "confirmed"
-            inv["confirmed_at"] = now
+            inv.status = "confirmed"
+            inv.confirmed_at = now
             fields.update({"status": "confirmed", "confirmed_at": now})
-            if paid_total > inv["amount_atomic"]:
+            if paid_total > inv.amount_atomic:
                 fields["overpaid"] = 1
         else:
-            if inv["status"] == "pending":
-                inv["status"] = "seen"
+            if inv.status == "pending":
+                inv.status = "seen"
                 fields["status"] = "seen"
-            if was_confirmed and paid_total > inv["amount_atomic"]:
+            if was_confirmed and paid_total > inv.amount_atomic:
                 fields["overpaid"] = 1
         record_update(target_id, fields)
 
@@ -319,8 +326,8 @@ def match_outputs(
 
 
 def recompute_confirmations(
-    invoices: list[dict[str, Any]],
-    payments_by_invoice: dict[str, list[dict[str, Any]]],
+    invoices: list[Invoice],
+    payments_by_invoice: dict[str, list[Payment]],
     chain_height: int,
     settings: dict[str, str],
     now: int,
@@ -330,33 +337,33 @@ def recompute_confirmations(
     an invoice when a NEW output arrives — this closes the gap when payments
     were matched before reaching the confirmation threshold.
 
-    Returns {"invoice_updates": {id: {...}}, "events": [...]}.
+    Returns {"invoice_updates": {id: field-dict}, "events": [...]}.
     """
     required = int(settings.get("confirmations_required", "10"))
     invoice_updates: dict[str, dict[str, Any]] = {}
     events: list[dict[str, Any]] = []
     for inv in invoices:
-        if inv["status"] not in ("seen", "expired"):
+        if inv.status not in ("seen", "expired"):
             continue
-        payments = payments_by_invoice.get(inv["id"], [])
+        payments = payments_by_invoice.get(inv.id, [])
         if not payments:
             continue
-        paid_total = sum(p["amount_atomic"] for p in payments)
-        if paid_total < inv["amount_atomic"]:
+        paid_total = sum(p.amount_atomic for p in payments)
+        if paid_total < inv.amount_atomic:
             continue
-        confs = min(_confirmations(p["block_height"], chain_height) for p in payments)
+        confs = min(_confirmations(p.block_height, chain_height) for p in payments)
         if confs < required:
             continue
         fields: dict[str, Any] = {"status": "confirmed", "confirmed_at": now}
-        if inv["status"] == "expired":
+        if inv.status == "expired":
             fields["late_payment"] = 1
-        if paid_total > inv["amount_atomic"] and not inv["overpaid"]:
+        if paid_total > inv.amount_atomic and not inv.overpaid:
             fields["overpaid"] = 1
-        invoice_updates[inv["id"]] = fields
+        invoice_updates[inv.id] = fields
         events.append({
             "event": "invoice.confirmed",
-            "invoice_id": inv["id"],
+            "invoice_id": inv.id,
             "payment": payments[-1],
-            "previous_status": inv["status"],
+            "previous_status": inv.status,
         })
     return {"invoice_updates": invoice_updates, "events": events}

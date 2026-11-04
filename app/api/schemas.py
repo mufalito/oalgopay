@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..invoices import AmountError, parse_amount_bnt
 
@@ -157,6 +157,7 @@ class SendResult(BaseModel):
 
 
 class PayoutOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     created_at: int
     address: str

@@ -127,7 +127,7 @@ class BringUp(unittest.TestCase):
             dev_cols = {c["name"] for c in insp.get_columns("webhook_deliveries")}
             self.assertTrue({"event_id", "previous_status"} <= dev_cols)
             self.assertEqual(tables, BUSINESS_TABLES | {"alembic_version"})
-            self.assertEqual(db.get_invoice("keep-me")["status"], "confirmed")
+            self.assertEqual(db.get_invoice("keep-me").status, "confirmed")
 
     def test_old_bookkeeping_database_is_stamped_and_dropped(self):
         with tempfile.TemporaryDirectory() as td:
@@ -137,7 +137,7 @@ class BringUp(unittest.TestCase):
             _, tables, version = self._inspect(path)
             self.assertEqual(version, "0002")
             self.assertNotIn("schema_migrations", tables)
-            self.assertEqual(db.get_invoice("keep-me")["status"], "confirmed")
+            self.assertEqual(db.get_invoice("keep-me").status, "confirmed")
 
     def test_partially_bookkept_database_stamps_then_upgrades(self):
         with tempfile.TemporaryDirectory() as td:

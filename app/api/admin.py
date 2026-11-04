@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .. import db, handle, invoices, webhooks
+from ..models import Invoice
 from .schemas import PayoutOut, SendRequest, SendResult, SettingsOut, WebhookCreateRequest, WebhookOut
 from ..auth import SESSION_COOKIE, check_session_token, make_session_token, require_admin
 from ..blocknet import BlocknetError
@@ -147,6 +148,7 @@ async def frag_overview(request: Request):
     settings = db.get_settings()
     display_handle = settings.get("display_handle", "")
     handle_info = await handle.resolve_handle(display_handle) if display_handle else None
+    counts = {s: 0 for s in ("pending", "seen", "confirmed", "expired", "cancelled")}
     counts.update(db.invoice_status_counts())
     return frag(request, "frags/_overview.html", {
         "node": node, "wallet": wallet, "handle_info": handle_info, "counts": counts,
@@ -189,10 +191,10 @@ async def frag_invoices_table(request: Request, status: str = "", limit: int = 5
     return frag(request, "frags/_invoices_table.html", {"invoices": rows})
 
 
-def _attach_pay_urls(request: Request, rows: list[dict[str, Any]]) -> None:
+def _attach_pay_urls(request: Request, rows: list[Invoice]) -> None:
     base = request.app.state.config["public_base_url"].rstrip("/")
     for r in rows:
-        r["pay_url"] = f"{base}/pay/{r['id']}"
+        r.pay_url = f"{base}/pay/{r.id}"
 
 
 @router.get("/admin/frag/invoice/{inv_id}", response_class=HTMLResponse)
@@ -204,9 +206,9 @@ async def frag_invoice(request: Request, inv_id: str):
     out = serialize_invoice(request, inv)
     out["deliveries"] = [
         {
-            "id": d["id"], "event": d["event"], "attempts": d["attempts"],
-            "last_status": d["last_status"], "last_error": d["last_error"],
-            "delivered_at": d["delivered_at"], "created_at": d["created_at"],
+            "id": d.id, "event": d.event, "attempts": d.attempts,
+            "last_status": d.last_status, "last_error": d.last_error,
+            "delivered_at": d.delivered_at, "created_at": d.created_at,
         }
         for d in db.deliveries_for_invoice(inv_id)
     ]
@@ -253,14 +255,14 @@ async def frag_confirm_invoice(inv_id: str, request: Request):
     inv = db.get_invoice(inv_id)
     if not inv:
         raise HTTPException(status_code=404, detail="invoice not found")
-    if inv["status"] not in ("confirmed", "cancelled"):
+    if inv.status not in ("confirmed", "cancelled"):
         try:
-            meta = json.loads(inv["metadata"]) if inv["metadata"] else {}
+            meta = json.loads(inv.meta) if inv.meta else {}
         except json.JSONDecodeError:
             meta = {}
         meta["manual_confirm"] = {
-            "at": int(time.time()), "previous_status": inv["status"],
-            "paid_atomic": inv["paid_atomic"],
+            "at": int(time.time()), "previous_status": inv.status,
+            "paid_atomic": inv.paid_atomic,
         }
         db.update_invoice(inv_id, {
             "status": "confirmed", "confirmed_at": int(time.time()),
@@ -268,7 +270,7 @@ async def frag_confirm_invoice(inv_id: str, request: Request):
         })
         webhooks.enqueue_event(
             request.app.state, "invoice.confirmed", inv_id,
-            previous_status=inv["status"],
+            previous_status=inv.status,
         )
     return await frag_invoice(request, inv_id)
 
@@ -279,23 +281,23 @@ async def frag_resend_webhooks(inv_id: str, request: Request):
     inv = db.get_invoice(inv_id)
     if not inv:
         raise HTTPException(status_code=404, detail="invoice not found")
-    webhooks.enqueue_event(request.app.state, "invoice.updated", inv_id, inv["status"])
+    webhooks.enqueue_event(request.app.state, "invoice.updated", inv_id, inv.status)
     return await frag_invoice(request, inv_id)
 
 
 def _webhooks_ctx() -> dict[str, Any]:
     endpoints = [
         {
-            "id": e["id"], "url": e["url"], "active": bool(e["active"]),
-            "created_at": e["created_at"], "secret_hint": e["secret"][:4] + "…",
+            "id": e.id, "url": e.url, "active": bool(e.active),
+            "created_at": e.created_at, "secret_hint": e.secret[:4] + "…",
         }
         for e in db.list_webhook_endpoints()
     ]
     deliveries = [
         {
-            "id": d["id"], "event": d["event"], "invoice_id": d["invoice_id"],
-            "attempts": d["attempts"], "last_status": d["last_status"],
-            "last_error": d["last_error"], "delivered_at": d["delivered_at"],
+            "id": d.delivery.id, "event": d.delivery.event, "invoice_id": d.delivery.invoice_id,
+            "attempts": d.delivery.attempts, "last_status": d.delivery.last_status,
+            "last_error": d.delivery.last_error, "delivered_at": d.delivery.delivered_at,
         }
         for d in db.list_deliveries(50)
     ]
@@ -329,7 +331,7 @@ async def frag_toggle_webhook(ep_id: int, request: Request):
     ep = db.get_webhook_endpoint(ep_id)
     if not ep:
         raise HTTPException(status_code=404, detail="endpoint not found")
-    db.update_webhook_endpoint(ep_id, {"active": 0 if ep["active"] else 1})
+    db.update_webhook_endpoint(ep_id, {"active": 0 if ep.active else 1})
     return await frag_webhooks(request)
 
 
@@ -586,7 +588,7 @@ async def json_create_webhook(body: WebhookCreateRequest, request: Request):
         raise HTTPException(status_code=422, detail="url must be an http(s) URL")
     secret = secrets.token_hex(32)
     ep = db.create_webhook_endpoint(body.url, secret)
-    return {"id": ep["id"], "url": ep["url"], "active": True, "secret": secret}
+    return {"id": ep.id, "url": ep.url, "active": True, "secret": secret}
 
 
 @router.delete("/admin/api/webhooks/{ep_id}")

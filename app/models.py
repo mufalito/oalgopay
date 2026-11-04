@@ -51,6 +51,12 @@ class Invoice(Base):
         Index("idx_invoices_created", text("created_at DESC")),
     )
 
+    def is_cancellable(self) -> bool:
+        return self.status in ("pending", "seen")
+
+    def is_expired(self, now: int) -> bool:
+        return self.status in ("pending", "seen") and self.paid_atomic == 0 and self.expires_at < now
+
 
 class Payment(Base):
     __tablename__ = "payments"

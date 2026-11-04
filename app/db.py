@@ -4,7 +4,9 @@ All SQL in the gateway lives here. The engine is created by connect() —
 SQLite connections run with WAL and foreign_keys=ON, like always — and the
 schema is brought up by Alembic (migrations/) on every boot, including the
 one-time stamp bridge from the retired schema_migrations bookkeeping.
-Every accessor keeps the dict-in/dict-out contract callers grew up with.
+Reads return ORM entities (Invoice, Payment, …) that stay usable after their
+session closes (expire_on_commit=False); writes stay Core statements, and
+insert_invoice/insert_payout still take field dicts built from API payloads.
 """
 from __future__ import annotations
 
@@ -12,7 +14,7 @@ import hashlib
 import logging
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple, TypeVar
 
 import sqlalchemy as sa
 from alembic import command
@@ -121,7 +123,7 @@ def connect(path: str | Path) -> Engine:
     if _engine is not None:
         _engine.dispose()
     _engine = _make_engine(url)
-    _SessionFactory = sessionmaker(bind=_engine)
+    _SessionFactory = sessionmaker(bind=_engine, expire_on_commit=False)
     _stamp_legacy(_engine)
     command.upgrade(_alembic_config(_engine), "head")
     with _SessionFactory.begin() as s:
@@ -143,26 +145,31 @@ def _insert(table: Any) -> Insert:
     return sa.insert(table)
 
 
-def _rows(stmt: sa.Selectable) -> list[dict[str, Any]]:
-    with _SessionFactory.begin() as s:
-        return [dict(r._mapping) for r in s.execute(stmt)]
+_T = TypeVar("_T")
 
 
-def _row(stmt: sa.Selectable) -> dict[str, Any] | None:
+def _entities(stmt: sa.Selectable) -> list[_T]:
+    """ORM entities; they stay readable after the session closes."""
     with _SessionFactory.begin() as s:
-        r = s.execute(stmt).first()
-    return dict(r._mapping) if r is not None else None
+        return list(s.scalars(stmt).all())
+
+
+def _entity(stmt: sa.Selectable) -> _T | None:
+    with _SessionFactory.begin() as s:
+        return s.scalars(stmt).first()
 
 
 # --- settings ---------------------------------------------------------------
 
 def get_setting(key: str, default: str = "") -> str:
-    value = _row(sa.select(Setting.__table__.c.value).where(Setting.__table__.c.key == key))
-    return value["value"] if value else default
+    with _SessionFactory.begin() as s:
+        value = s.execute(sa.select(Setting.value).where(Setting.key == key)).scalar()
+    return value if value is not None else default
 
 
 def get_settings() -> dict[str, str]:
-    return {r["key"]: r["value"] for r in _rows(sa.select(Setting.__table__))}
+    with _SessionFactory.begin() as s:
+        return {key: value for key, value in s.execute(sa.select(Setting.key, Setting.value))}
 
 
 def set_setting(key: str, value: str) -> None:
@@ -193,8 +200,8 @@ def insert_invoice(inv: dict[str, Any]) -> None:
         )
 
 
-def get_invoice(inv_id: str) -> dict[str, Any] | None:
-    return _row(sa.select(Invoice.__table__).where(Invoice.__table__.c.id == inv_id))
+def get_invoice(inv_id: str) -> Invoice | None:
+    return _entity(sa.select(Invoice).where(Invoice.id == inv_id))
 
 
 def list_invoices(
@@ -202,17 +209,17 @@ def list_invoices(
     limit: int = 50,
     offset: int = 0,
     statuses: tuple[str, ...] | None = None,
-) -> list[dict[str, Any]]:
-    stmt = sa.select(Invoice.__table__)
+) -> list[Invoice]:
+    stmt = sa.select(Invoice)
     clauses = []
     if status:
-        clauses.append(Invoice.__table__.c.status == status)
+        clauses.append(Invoice.status == status)
     if statuses:
-        clauses.append(Invoice.__table__.c.status.in_(statuses))
+        clauses.append(Invoice.status.in_(statuses))
     if clauses:
         stmt = stmt.where(*clauses)
-    stmt = stmt.order_by(Invoice.__table__.c.created_at.desc()).limit(limit).offset(offset)
-    return _rows(stmt)
+    stmt = stmt.order_by(Invoice.created_at.desc()).limit(limit).offset(offset)
+    return _entities(stmt)
 
 
 def update_invoice(inv_id: str, fields: dict[str, Any]) -> None:
@@ -235,54 +242,58 @@ def invoice_status_counts() -> dict[str, int]:
 
 # --- payments ------------------------------------------------------------------
 
-_PAYMENT_COLS = (
-    "txid", "output_index", "invoice_id", "amount_atomic", "block_height",
-    "memo_hex", "matched_at", "match_method",
-)
-
-
-def insert_payment(p: dict[str, Any]) -> bool:
+def insert_payment(p: Payment) -> bool:
     """Insert a payment; returns False if (txid, output_index) already credited."""
     with _SessionFactory.begin() as s:
         result = s.execute(
             _insert(Payment.__table__)
-            .values({c: p[c] for c in _PAYMENT_COLS})
+            .values(
+                txid=p.txid,
+                output_index=p.output_index,
+                invoice_id=p.invoice_id,
+                amount_atomic=p.amount_atomic,
+                block_height=p.block_height,
+                memo_hex=p.memo_hex,
+                matched_at=p.matched_at,
+                match_method=p.match_method,
+            )
             .on_conflict_do_nothing()
         )
         return result.rowcount > 0
 
 
 def get_payment_keys() -> set[tuple[str, int]]:
-    rows = _rows(sa.select(Payment.__table__.c.txid, Payment.__table__.c.output_index))
-    return {(r["txid"], r["output_index"]) for r in rows}
+    with _SessionFactory.begin() as s:
+        rows = s.execute(sa.select(Payment.txid, Payment.output_index)).all()
+    return {(txid, output_index) for txid, output_index in rows}
 
 
-def payments_for_invoice(inv_id: str) -> list[dict[str, Any]]:
+def payments_for_invoice(inv_id: str) -> list[Payment]:
     stmt = (
-        sa.select(Payment.__table__)
-        .where(Payment.__table__.c.invoice_id == inv_id)
-        .order_by(Payment.__table__.c.matched_at, Payment.__table__.c.txid)
+        sa.select(Payment)
+        .where(Payment.invoice_id == inv_id)
+        .order_by(Payment.matched_at, Payment.txid)
     )
-    return _rows(stmt)
+    return _entities(stmt)
 
 
-def payments_for_invoices(inv_ids: list[str]) -> dict[str, list[dict[str, Any]]]:
-    out: dict[str, list[dict[str, Any]]] = {i: [] for i in inv_ids}
+def payments_for_invoices(inv_ids: list[str]) -> dict[str, list[Payment]]:
+    out: dict[str, list[Payment]] = {i: [] for i in inv_ids}
     if not inv_ids:
         return out
     stmt = (
-        sa.select(Payment.__table__)
-        .where(Payment.__table__.c.invoice_id.in_(inv_ids))
-        .order_by(Payment.__table__.c.matched_at, Payment.__table__.c.txid)
+        sa.select(Payment)
+        .where(Payment.invoice_id.in_(inv_ids))
+        .order_by(Payment.matched_at, Payment.txid)
     )
-    for p in _rows(stmt):
-        out[p["invoice_id"]].append(p)
+    for p in _entities(stmt):
+        out[p.invoice_id].append(p)
     return out
 
 
 # --- webhook endpoints ----------------------------------------------------------
 
-def create_webhook_endpoint(url: str, secret: str) -> dict[str, Any]:
+def create_webhook_endpoint(url: str, secret: str) -> WebhookEndpoint:
     with _SessionFactory.begin() as s:
         result = s.execute(
             sa.insert(WebhookEndpoint.__table__).values(
@@ -290,20 +301,20 @@ def create_webhook_endpoint(url: str, secret: str) -> dict[str, Any]:
             )
         )
         ep_id = result.inserted_primary_key[0]
-    return get_webhook_endpoint(ep_id)  # type: ignore[return-value]
+        return s.get(WebhookEndpoint, ep_id)
 
 
-def get_webhook_endpoint(ep_id: int) -> dict[str, Any] | None:
-    return _row(
-        sa.select(WebhookEndpoint.__table__).where(WebhookEndpoint.__table__.c.id == ep_id)
+def get_webhook_endpoint(ep_id: int) -> WebhookEndpoint | None:
+    return _entity(
+        sa.select(WebhookEndpoint).where(WebhookEndpoint.id == ep_id)
     )
 
 
-def list_webhook_endpoints(active_only: bool = False) -> list[dict[str, Any]]:
-    stmt = sa.select(WebhookEndpoint.__table__).order_by(WebhookEndpoint.__table__.c.id)
+def list_webhook_endpoints(active_only: bool = False) -> list[WebhookEndpoint]:
+    stmt = sa.select(WebhookEndpoint).order_by(WebhookEndpoint.id)
     if active_only:
-        stmt = stmt.where(WebhookEndpoint.__table__.c.active == 1)
-    return _rows(stmt)
+        stmt = stmt.where(WebhookEndpoint.active == 1)
+    return _entities(stmt)
 
 
 def update_webhook_endpoint(ep_id: int, fields: dict[str, Any]) -> None:
@@ -351,20 +362,25 @@ def enqueue_delivery(
         )
 
 
-def pending_deliveries(now: int) -> list[dict[str, Any]]:
-    d, e = WebhookDelivery.__table__.c, WebhookEndpoint.__table__.c
+class DeliveryWithEndpoint(NamedTuple):
+    """A delivery row joined with its endpoint's url/secret (url/secret are
+    None when the endpoint row was deleted — LEFT JOIN in list_deliveries)."""
+    delivery: WebhookDelivery
+    endpoint_url: str | None
+    endpoint_secret: str | None
+
+
+def pending_deliveries(now: int) -> list[DeliveryWithEndpoint]:
     stmt = (
-        sa.select(
-            WebhookDelivery.__table__,
-            e.url.label("endpoint_url"),
-            e.secret.label("endpoint_secret"),
-        )
-        .select_from(WebhookDelivery.__table__.join(WebhookEndpoint.__table__, e.id == d.endpoint_id))
-        .where(d.delivered_at.is_(None), d.next_attempt_at <= now)
-        .order_by(d.id)
+        sa.select(WebhookDelivery, WebhookEndpoint.url, WebhookEndpoint.secret)
+        .join(WebhookEndpoint, WebhookEndpoint.id == WebhookDelivery.endpoint_id)
+        .where(WebhookDelivery.delivered_at.is_(None), WebhookDelivery.next_attempt_at <= now)
+        .order_by(WebhookDelivery.id)
         .limit(20)
     )
-    return _rows(stmt)
+    with _SessionFactory.begin() as s:
+        rows = s.execute(stmt).all()
+    return [DeliveryWithEndpoint(d, url, secret) for d, url, secret in rows]
 
 
 def update_delivery(delivery_id: int, fields: dict[str, Any]) -> None:
@@ -376,26 +392,25 @@ def update_delivery(delivery_id: int, fields: dict[str, Any]) -> None:
         )
 
 
-def list_deliveries(limit: int = 50) -> list[dict[str, Any]]:
-    d, e = WebhookDelivery.__table__.c, WebhookEndpoint.__table__.c
+def list_deliveries(limit: int = 50) -> list[DeliveryWithEndpoint]:
     stmt = (
-        sa.select(WebhookDelivery.__table__, e.url.label("endpoint_url"))
-        .select_from(
-            WebhookDelivery.__table__.outerjoin(WebhookEndpoint.__table__, e.id == d.endpoint_id)
-        )
-        .order_by(d.id.desc())
+        sa.select(WebhookDelivery, WebhookEndpoint.url)
+        .join(WebhookEndpoint, WebhookEndpoint.id == WebhookDelivery.endpoint_id, isouter=True)
+        .order_by(WebhookDelivery.id.desc())
         .limit(limit)
     )
-    return _rows(stmt)
+    with _SessionFactory.begin() as s:
+        rows = s.execute(stmt).all()
+    return [DeliveryWithEndpoint(d, url, None) for d, url in rows]
 
 
-def deliveries_for_invoice(inv_id: str) -> list[dict[str, Any]]:
+def deliveries_for_invoice(inv_id: str) -> list[WebhookDelivery]:
     stmt = (
-        sa.select(WebhookDelivery.__table__)
-        .where(WebhookDelivery.__table__.c.invoice_id == inv_id)
-        .order_by(WebhookDelivery.__table__.c.id)
+        sa.select(WebhookDelivery)
+        .where(WebhookDelivery.invoice_id == inv_id)
+        .order_by(WebhookDelivery.id)
     )
-    return _rows(stmt)
+    return _entities(stmt)
 
 
 # --- payouts ----------------------------------------------------------------------
@@ -415,19 +430,17 @@ def insert_payout(p: dict[str, Any]) -> None:
         )
 
 
-def list_payouts(limit: int = 25) -> list[dict[str, Any]]:
-    stmt = sa.select(Payout.__table__).order_by(Payout.__table__.c.id.desc()).limit(limit)
-    return _rows(stmt)
+def list_payouts(limit: int = 25) -> list[Payout]:
+    stmt = sa.select(Payout).order_by(Payout.id.desc()).limit(limit)
+    return _entities(stmt)
 
 
-def get_payout_by_key(idempotency_key: str) -> dict[str, Any] | None:
-    return _row(
-        sa.select(Payout.__table__).where(Payout.__table__.c.idempotency_key == idempotency_key)
-    )
+def get_payout_by_key(idempotency_key: str) -> Payout | None:
+    return _entity(sa.select(Payout).where(Payout.idempotency_key == idempotency_key))
 
 
-def get_payout(payout_id: int) -> dict[str, Any] | None:
-    return _row(sa.select(Payout.__table__).where(Payout.__table__.c.id == payout_id))
+def get_payout(payout_id: int) -> Payout | None:
+    return _entity(sa.select(Payout).where(Payout.id == payout_id))
 
 
 def update_payout_error(key: str, error: str) -> None:
@@ -450,7 +463,7 @@ def update_payout_sent(key: str, txid: str | None, fee_atomic: int | None) -> No
 
 # --- api keys ------------------------------------------------------------------------
 
-def create_api_key(kind: str, name: str, key: str) -> dict[str, Any]:
+def create_api_key(kind: str, name: str, key: str) -> ApiKey | None:
     """Insert a full key; stores only its sha256. Returns the row (with prefix)."""
     key_hash = hashlib.sha256(key.encode()).hexdigest()
     with _SessionFactory.begin() as s:
@@ -459,30 +472,30 @@ def create_api_key(kind: str, name: str, key: str) -> dict[str, Any]:
             .values(kind=kind, name=name, key_hash=key_hash, prefix=key[:6], created_at=int(time.time()))
             .on_conflict_do_nothing()
         )
-    return _row(sa.select(ApiKey.__table__).where(ApiKey.__table__.c.key_hash == key_hash)) or {}
+    return _entity(sa.select(ApiKey).where(ApiKey.key_hash == key_hash))
 
 
-def verify_api_key(kind: str, key: str) -> dict[str, Any] | None:
+def verify_api_key(kind: str, key: str) -> ApiKey | None:
     """Active key of the given kind, or None. Updates last_used_at."""
-    row = _row(
-        sa.select(ApiKey.__table__).where(
-            ApiKey.__table__.c.kind == kind,
-            ApiKey.__table__.c.key_hash == hashlib.sha256(key.encode()).hexdigest(),
-            ApiKey.__table__.c.revoked_at.is_(None),
+    row = _entity(
+        sa.select(ApiKey).where(
+            ApiKey.kind == kind,
+            ApiKey.key_hash == hashlib.sha256(key.encode()).hexdigest(),
+            ApiKey.revoked_at.is_(None),
         )
     )
     if row:
         with _SessionFactory.begin() as s:
             s.execute(
                 sa.update(ApiKey.__table__)
-                .where(ApiKey.__table__.c.id == row["id"])
+                .where(ApiKey.id == row.id)
                 .values(last_used_at=int(time.time()))
             )
     return row
 
 
-def list_api_keys() -> list[dict[str, Any]]:
-    return _rows(sa.select(ApiKey.__table__).order_by(ApiKey.__table__.c.kind, ApiKey.__table__.c.id))
+def list_api_keys() -> list[ApiKey]:
+    return _entities(sa.select(ApiKey).order_by(ApiKey.kind, ApiKey.id))
 
 
 def revoke_api_key(key_id: int) -> bool:
@@ -517,10 +530,8 @@ def create_auth_challenge(nonce: str, now: int) -> None:
         )
 
 
-def get_auth_challenge(nonce: str) -> dict[str, Any] | None:
-    return _row(
-        sa.select(AuthChallenge.__table__).where(AuthChallenge.__table__.c.nonce == nonce)
-    )
+def get_auth_challenge(nonce: str) -> AuthChallenge | None:
+    return _entity(sa.select(AuthChallenge).where(AuthChallenge.nonce == nonce))
 
 
 def consume_auth_challenge(nonce: str, now: int) -> bool:

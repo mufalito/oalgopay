@@ -53,8 +53,8 @@ async def create_payout(body: PayoutCreateRequest, request: Request, _: None = S
                 detail="idempotency_key must be 8-100 chars of A-Za-z0-9._:-",
             )
         existing = db.get_payout_by_key(client_key)
-        if existing and existing["txid"]:
-            return {**existing, "replayed": True}
+        if existing and existing.txid:
+            return {**PayoutOut.model_validate(existing).model_dump(), "replayed": True}
 
     amount = body.amount_atomic_resolved
     address = body.address.strip()
@@ -73,7 +73,8 @@ async def create_payout(body: PayoutCreateRequest, request: Request, _: None = S
         raise HTTPException(status_code=422, detail=f"core rejected: {exc}") from exc
 
     row = db.get_payout_by_key(attempt_key)
-    return {**(row or result), "replayed": False}
+    payload = PayoutOut.model_validate(row).model_dump() if row else result
+    return {**payload, "replayed": False}
 
 
 async def _send_with_key(request: Request, address: str, amount: int, memo: str | None, key: str) -> dict[str, Any]:

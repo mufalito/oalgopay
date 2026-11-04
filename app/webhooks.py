@@ -69,7 +69,7 @@ def enqueue_event(
     now = int(time.time())
     event_id = "evt_" + secrets.token_hex(8)
     for ep in db.list_webhook_endpoints(active_only=True):
-        db.enqueue_delivery(ep["id"], event, invoice_id, now, event_id, previous_status)
+        db.enqueue_delivery(ep.id, event, invoice_id, now, event_id, previous_status)
 
 
 async def process_deliveries(state: Any) -> int:
@@ -78,31 +78,32 @@ async def process_deliveries(state: Any) -> int:
     due = db.pending_deliveries(now)
     sent = 0
     async with httpx.AsyncClient(timeout=10.0) as http:
-        for d in due:
+        for row in due:
+            d = row.delivery
             payload = build_event_payload(
-                state, d["event"], d["invoice_id"],
-                d["event_id"], d["created_at"], d["previous_status"],
+                state, d.event, d.invoice_id,
+                d.event_id, d.created_at, d.previous_status,
             )
             raw = json.dumps(payload, separators=(",", ":")).encode()
             ts = int(time.time())
-            sig = sign_payload(d["endpoint_secret"], ts, raw)
+            sig = sign_payload(row.endpoint_secret, ts, raw)
             headers = {
                 "Content-Type": "application/json",
                 "User-Agent": "OalgoPay/0.1",
-                "X-OalgoPay-Event": d["event"],
-                "X-OalgoPay-Event-Id": d["event_id"] or "",
-                "X-OalgoPay-Invoice": d["invoice_id"] or "",
+                "X-OalgoPay-Event": d.event,
+                "X-OalgoPay-Event-Id": d.event_id or "",
+                "X-OalgoPay-Invoice": d.invoice_id or "",
                 "X-OalgoPay-Signature": sig,
             }
-            attempts = d["attempts"] + 1
+            attempts = d.attempts + 1
             try:
-                resp = await http.post(d["endpoint_url"], content=raw, headers=headers)
+                resp = await http.post(row.endpoint_url, content=raw, headers=headers)
                 status, err = resp.status_code, ""
             except httpx.HTTPError as exc:
                 status, err = None, f"{type(exc).__name__}: {exc}"
             if status is not None and 200 <= status < 300:
                 db.update_delivery(
-                    d["id"],
+                    d.id,
                     {
                         "attempts": attempts,
                         "last_status": status,
@@ -111,10 +112,10 @@ async def process_deliveries(state: Any) -> int:
                         "next_attempt_at": int(time.time()),
                     },
                 )
-                log.info("webhook %s [%s] delivered to %s (HTTP %s)", d["id"], d["event"], d["endpoint_url"], status)
+                log.info("webhook %s [%s] delivered to %s (HTTP %s)", d.id, d.event, row.endpoint_url, status)
             elif attempts >= MAX_ATTEMPTS:
                 db.update_delivery(
-                    d["id"],
+                    d.id,
                     {
                         "attempts": attempts,
                         "last_status": status,
@@ -122,11 +123,11 @@ async def process_deliveries(state: Any) -> int:
                         "next_attempt_at": 2**31 - 1,  # permanent fail; row kept in log
                     },
                 )
-                log.warning("webhook %s permanently failed after %s attempts", d["id"], attempts)
+                log.warning("webhook %s permanently failed after %s attempts", d.id, attempts)
             else:
                 delay = retry_backoff(min(attempts, len(RETRY_BACKOFF)) - 1)
                 db.update_delivery(
-                    d["id"],
+                    d.id,
                     {
                         "attempts": attempts,
                         "last_status": status,

@@ -122,7 +122,7 @@ def _run_matcher(state: Any, outputs: list[dict[str, Any]], chain_height: int) -
     active = db.list_invoices(statuses=MATCHABLE_STATUSES, limit=100000)
     if not active:
         return
-    payments_by_invoice = db.payments_for_invoices([i["id"] for i in active])
+    payments_by_invoice = db.payments_for_invoices([i.id for i in active])
     existing_keys = db.get_payment_keys()
     settings = db.get_settings()
     now = int(time.time())
@@ -134,16 +134,16 @@ def _run_matcher(state: Any, outputs: list[dict[str, Any]], chain_height: int) -
     event_invoice_ids: set[str] = set()
     for p in result["payments"]:
         if db.insert_payment(p):
-            inserted.add((p["txid"], p["output_index"]))
-            event_invoice_ids.add(p["invoice_id"])
+            inserted.add((p.txid, p.output_index))
+            event_invoice_ids.add(p.invoice_id)
         else:
-            log.debug("payment %s:%s already credited, skipping", p["txid"], p["output_index"])
+            log.debug("payment %s:%s already credited, skipping", p.txid, p.output_index)
     for inv_id, fields in result["invoice_updates"].items():
         db.update_invoice(inv_id, fields)
         if fields.get("status") == "confirmed":
             event_invoice_ids.add(inv_id)
     for e in result["events"]:
-        if (e["payment"]["txid"], e["payment"]["output_index"]) in inserted:
+        if (e["payment"].txid, e["payment"].output_index) in inserted:
             webhooks.enqueue_event(state, e["event"], e["invoice_id"], e.get("previous_status"))
     if result["payments"]:
         log.info(
@@ -156,7 +156,7 @@ def _run_matcher(state: Any, outputs: list[dict[str, Any]], chain_height: int) -
     # blocks land, even when no new outputs arrive.
     reloaded = db.list_invoices(statuses=("seen", "expired"), limit=100000)
     if reloaded:
-        re_pays = db.payments_for_invoices([i["id"] for i in reloaded])
+        re_pays = db.payments_for_invoices([i.id for i in reloaded])
         sweep = invoices.recompute_confirmations(reloaded, re_pays, chain_height, settings, now)
         for inv_id, fields in sweep["invoice_updates"].items():
             db.update_invoice(inv_id, fields)
@@ -219,9 +219,7 @@ async def reconcile(state: Any) -> None:
 def expiry_sweep(state: Any) -> None:
     now = int(time.time())
     stale = db.list_invoices(statuses=("pending", "seen"), limit=100000)
-    expired_ids = [
-        i["id"] for i in stale if i["paid_atomic"] == 0 and i["expires_at"] < now
-    ]
+    expired_ids = [i.id for i in stale if i.is_expired(now)]
     for inv_id in expired_ids:
         db.update_invoice(inv_id, {"status": "expired"})
         webhooks.enqueue_event(state, "invoice.expired", inv_id, "pending")
