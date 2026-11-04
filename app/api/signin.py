@@ -86,9 +86,9 @@ async def verify(
     row = db.get_auth_challenge(body.nonce)
     if row is None:
         raise HTTPException(status_code=400, detail="unknown challenge")
-    if row["used_at"] is not None:
+    if row.used_at is not None:
         raise HTTPException(status_code=400, detail="challenge already used")
-    if now - int(row["created_at"]) > CHALLENGE_TTL_S:
+    if now - int(row.created_at) > CHALLENGE_TTL_S:
         raise HTTPException(status_code=400, detail="challenge expired — request a new one")
 
     try:

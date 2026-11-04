@@ -2,15 +2,17 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 import time
 from typing import Annotated, Any
+
+from sqlalchemy.exc import IntegrityError
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import ValidationError
 
 from .. import db, invoices
+from ..models import Invoice
 
 from .schemas import InvoiceCreateRequest, InvoiceListOut, InvoiceOut
 
@@ -36,9 +38,9 @@ def require_merchant(
 
 
 
-def serialize_invoice(request: Request, inv: dict[str, Any], include_payments: bool = True) -> dict[str, Any]:
+def serialize_invoice(request: Request, inv: Invoice, include_payments: bool = True) -> dict[str, Any]:
     state = request.app.state
-    payments = db.payments_for_invoice(inv["id"]) if include_payments else []
+    payments = db.payments_for_invoice(inv.id) if include_payments else []
     return invoices.invoice_to_json(
         inv,
         payments,
@@ -73,19 +75,19 @@ def create_invoice_service(body: InvoiceCreateRequest | dict[str, Any], request:
         try:
             db.insert_invoice(row)
             break
-        except sqlite3.IntegrityError:
+        except IntegrityError:
             row["id"] = row["memo"] = inv["id"] = invoices.mint_id()
     else:
         raise HTTPException(status_code=500, detail="could not mint unique invoice id")
-    return serialize_invoice(request, inv)
+    return serialize_invoice(request, db.get_invoice(row["id"]))
 
 
 def cancel_invoice_service(inv_id: str, request: Request) -> dict[str, Any]:
     inv = db.get_invoice(inv_id)
     if not inv:
         raise HTTPException(status_code=404, detail="invoice not found")
-    if inv["status"] not in ("pending", "seen"):
-        raise HTTPException(status_code=409, detail=f"cannot cancel invoice in status {inv['status']}")
+    if not inv.is_cancellable():
+        raise HTTPException(status_code=409, detail=f"cannot cancel invoice in status {inv.status}")
     db.update_invoice(inv_id, {"status": "cancelled"})
     return serialize_invoice(request, db.get_invoice(inv_id))
 

@@ -17,26 +17,21 @@ from app.invoices import (  # noqa: E402
     parse_amount_bnt,
 )
 
+from app.models import Invoice, Payment  # noqa: E402
+
 SETTINGS = {"confirmations_required": "2", "amount_fallback_matching": "1"}
 NOW = 1_700_000_000
 
 
 def inv(inv_id: str, amount: int, status="pending", paid=0, created=NOW, expires=NOW + 3600, **kw):
-    return {
-        "id": inv_id,
-        "created_at": created,
-        "expires_at": expires,
-        "amount_atomic": amount,
-        "memo": inv_id,
-        "label": None,
-        "metadata": {},
-        "status": status,
-        "paid_atomic": paid,
-        "confirmed_at": None,
-        "late_payment": 0,
-        "overpaid": 0,
-        **kw,
-    }
+    fields = dict(
+        id=inv_id, created_at=created, created_height=0, expires_at=expires,
+        amount_atomic=amount, memo=inv_id, label=None, meta="{}",
+        status=status, paid_atomic=paid, confirmed_at=None, late_payment=0,
+        overpaid=0,
+    )
+    fields.update(kw)
+    return Invoice(**fields)
 
 
 def out(txid: str, amount: int, memo_text: str | None, height: int = 100, index=0):
@@ -102,7 +97,7 @@ class TestMatching(unittest.TestCase):
         res = self.run_match([out("tx1", 10_000_000, "INV-ABCDEFGH", height=0)], invoices)
         self.assertEqual(len(res["payments"]), 1)
         p = res["payments"][0]
-        self.assertEqual((p["invoice_id"], p["match_method"]), ("INV-ABCDEFGH", "memo"))
+        self.assertEqual((p.invoice_id, p.match_method), ("INV-ABCDEFGH", "memo"))
         self.assertEqual(res["invoice_updates"]["INV-ABCDEFGH"]["status"], "seen")
         self.assertNotIn("confirmed_at", res["invoice_updates"]["INV-ABCDEFGH"])
         self.assertEqual([e["event"] for e in res["events"]], ["payment.seen"])
@@ -154,7 +149,7 @@ class TestMatching(unittest.TestCase):
         invoices = [inv("INV-ABCDEFGH", 10_000_000)]
         outputs = [out("tx1", 10_000_000, "INV-ABCDEFGH", height=100)]
         res1 = self.run_match(outputs, invoices)
-        keys = {(p["txid"], p["output_index"]) for p in res1["payments"]}
+        keys = {(p.txid, p.output_index) for p in res1["payments"]}
         pays = {"INV-ABCDEFGH": res1["payments"]}
         res2 = match_outputs(outputs, 102, invoices, pays, keys, SETTINGS, now=NOW + 5)
         self.assertEqual(res2["payments"], [])
@@ -165,8 +160,8 @@ class TestMatching(unittest.TestCase):
         older = inv("INV-AAAAAAAA", 7_000_000, created=NOW - 500)
         newer = inv("INV-BBBBBBBB", 7_000_000, created=NOW)
         res = self.run_match([out("tx1", 7_000_000, None, height=100)], [newer, older])
-        self.assertEqual(res["payments"][0]["invoice_id"], "INV-AAAAAAAA")
-        self.assertEqual(res["payments"][0]["match_method"], "amount")
+        self.assertEqual(res["payments"][0].invoice_id, "INV-AAAAAAAA")
+        self.assertEqual(res["payments"][0].match_method, "amount")
 
     def test_amount_fallback_skips_partially_paid(self):
         invoices = [inv("INV-AAAAAAAA", 7_000_000, paid=3_000_000)]
@@ -183,8 +178,8 @@ class TestMatching(unittest.TestCase):
         target = inv("INV-AAAAAAAA", 7_000_000, created=NOW - 999)
         other = inv("INV-BBBBBBBB", 7_000_000, created=NOW)
         res = self.run_match([out("tx1", 7_000_000, "INV-BBBBBBBB", height=100)], [target, other])
-        self.assertEqual(res["payments"][0]["invoice_id"], "INV-BBBBBBBB")
-        self.assertEqual(res["payments"][0]["match_method"], "memo")
+        self.assertEqual(res["payments"][0].invoice_id, "INV-BBBBBBBB")
+        self.assertEqual(res["payments"][0].match_method, "memo")
 
     def test_memo_matches_expired_invoice_late_payment(self):
         invoices = [inv("INV-AAAAAAAA", 10_000_000, status="expired", expires=NOW - 10)]
@@ -216,9 +211,9 @@ class TestMatching(unittest.TestCase):
     def test_metadata_json_roundtrip(self):
         # invoices stored in DB carry metadata as TEXT; matcher must not choke
         i = inv("INV-AAAAAAAA", 7_000_000)
-        i["metadata"] = json.dumps({"order": 1})
+        i.meta = json.dumps({"order": 1})
         res = self.run_match([out("tx1", 7_000_000, "INV-AAAAAAAA", height=100)], [i])
-        self.assertEqual(res["payments"][0]["invoice_id"], "INV-AAAAAAAA")
+        self.assertEqual(res["payments"][0].invoice_id, "INV-AAAAAAAA")
 
 
 if __name__ == "__main__":
@@ -231,7 +226,9 @@ class TestRecomputeConfirmations(unittest.TestCase):
     def test_seen_confirms_when_blocks_land(self):
         from app.invoices import recompute_confirmations
         invoices = [inv("INV-AAAAAAAA", 10_000_000, status="seen", paid=10_000_000)]
-        pays = {"INV-AAAAAAAA": [{"txid": "tx1", "output_index": 0, "amount_atomic": 10_000_000, "block_height": 100}]}
+        pays = {"INV-AAAAAAAA": [Payment(txid="tx1", output_index=0, invoice_id="INV-AAAAAAAA",
+                                         amount_atomic=10_000_000, block_height=100,
+                                         memo_hex=None, matched_at=NOW, match_method="memo")]}
         # match happened at height 100 with required 2 -> stayed seen; now chain 103
         res = recompute_confirmations(invoices, pays, 103, SETTINGS, now=NOW)
         self.assertEqual(res["invoice_updates"]["INV-AAAAAAAA"]["status"], "confirmed")
@@ -240,7 +237,9 @@ class TestRecomputeConfirmations(unittest.TestCase):
     def test_below_threshold_unchanged(self):
         from app.invoices import recompute_confirmations
         invoices = [inv("INV-AAAAAAAA", 10_000_000, status="seen", paid=10_000_000)]
-        pays = {"INV-AAAAAAAA": [{"txid": "tx1", "output_index": 0, "amount_atomic": 10_000_000, "block_height": 102}]}
+        pays = {"INV-AAAAAAAA": [Payment(txid="tx1", output_index=0, invoice_id="INV-AAAAAAAA",
+                                         amount_atomic=10_000_000, block_height=102,
+                                         memo_hex=None, matched_at=NOW, match_method="memo")]}
         res = recompute_confirmations(invoices, pays, 103, SETTINGS, now=NOW)  # conf 1 < 2
         self.assertEqual(res["invoice_updates"], {})
         self.assertEqual(res["events"], [])
@@ -248,21 +247,27 @@ class TestRecomputeConfirmations(unittest.TestCase):
     def test_mempool_payment_not_confirmed(self):
         from app.invoices import recompute_confirmations
         invoices = [inv("INV-AAAAAAAA", 10_000_000, status="seen", paid=10_000_000)]
-        pays = {"INV-AAAAAAAA": [{"txid": "tx1", "output_index": 0, "amount_atomic": 10_000_000, "block_height": 0}]}
+        pays = {"INV-AAAAAAAA": [Payment(txid="tx1", output_index=0, invoice_id="INV-AAAAAAAA",
+                                         amount_atomic=10_000_000, block_height=0,
+                                         memo_hex=None, matched_at=NOW, match_method="memo")]}
         res = recompute_confirmations(invoices, pays, 999, SETTINGS, now=NOW)
         self.assertEqual(res["invoice_updates"], {})
 
     def test_underpaid_seen_not_confirmed(self):
         from app.invoices import recompute_confirmations
         invoices = [inv("INV-AAAAAAAA", 20_000_000, status="seen", paid=10_000_000)]
-        pays = {"INV-AAAAAAAA": [{"txid": "tx1", "output_index": 0, "amount_atomic": 10_000_000, "block_height": 100}]}
+        pays = {"INV-AAAAAAAA": [Payment(txid="tx1", output_index=0, invoice_id="INV-AAAAAAAA",
+                                         amount_atomic=10_000_000, block_height=100,
+                                         memo_hex=None, matched_at=NOW, match_method="memo")]}
         res = recompute_confirmations(invoices, pays, 200, SETTINGS, now=NOW)
         self.assertEqual(res["invoice_updates"], {})
 
     def test_expired_late_payment_confirms_with_flag(self):
         from app.invoices import recompute_confirmations
         invoices = [inv("INV-AAAAAAAA", 10_000_000, status="expired", paid=10_000_000)]
-        pays = {"INV-AAAAAAAA": [{"txid": "tx1", "output_index": 0, "amount_atomic": 10_000_000, "block_height": 100}]}
+        pays = {"INV-AAAAAAAA": [Payment(txid="tx1", output_index=0, invoice_id="INV-AAAAAAAA",
+                                         amount_atomic=10_000_000, block_height=100,
+                                         memo_hex=None, matched_at=NOW, match_method="memo")]}
         res = recompute_confirmations(invoices, pays, 103, SETTINGS, now=NOW)
         self.assertEqual(res["invoice_updates"]["INV-AAAAAAAA"]["late_payment"], 1)
         self.assertEqual(res["invoice_updates"]["INV-AAAAAAAA"]["status"], "confirmed")
@@ -290,9 +295,9 @@ class TestInvoiceJson(unittest.TestCase):
         from app.invoices import invoice_to_json
         base = {"confirmations_required": "10", "display_handle": ""}
         i = inv("INV-AAAAAAAA", 10_000_000, status="seen", paid=4_000_000)
-        pay = {"txid": "19c6e0764e31ad1e5e7482e37841681b45dc6af407fe9cba2428aa1444c4ff3b",
-               "output_index": 0, "amount_atomic": 4_000_000, "block_height": 90,
-               "matched_at": NOW, "match_method": "memo"}
+        pay = Payment(txid="19c6e0764e31ad1e5e7482e37841681b45dc6af407fe9cba2428aa1444c4ff3b",
+                      output_index=0, invoice_id="INV-AAAAAAAA", amount_atomic=4_000_000,
+                      block_height=90, memo_hex=None, matched_at=NOW, match_method="memo")
         out = invoice_to_json(i, [pay], settings=base, public_base_url="http://x:1",
                               address="TESTADDR", chain_height=100)
         self.assertEqual(

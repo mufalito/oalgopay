@@ -53,8 +53,8 @@ async def create_payout(body: PayoutCreateRequest, request: Request, _: None = S
                 detail="idempotency_key must be 8-100 chars of A-Za-z0-9._:-",
             )
         existing = db.get_payout_by_key(client_key)
-        if existing and existing["txid"]:
-            return {**existing, "replayed": True}
+        if existing and existing.txid:
+            return {**PayoutOut.model_validate(existing).model_dump(), "replayed": True}
 
     amount = body.amount_atomic_resolved
     address = body.address.strip()
@@ -69,14 +69,12 @@ async def create_payout(body: PayoutCreateRequest, request: Request, _: None = S
     try:
         result = await _send_with_key(request, address, amount, body.memo, attempt_key)
     except BlocknetError as exc:
-        db.execute(
-            "UPDATE payouts SET error = ? WHERE idempotency_key = ?",
-            (str(exc), attempt_key),
-        )
+        db.update_payout_error(attempt_key, str(exc))
         raise HTTPException(status_code=422, detail=f"core rejected: {exc}") from exc
 
     row = db.get_payout_by_key(attempt_key)
-    return {**(row or result), "replayed": False}
+    payload = PayoutOut.model_validate(row).model_dump() if row else result
+    return {**payload, "replayed": False}
 
 
 async def _send_with_key(request: Request, address: str, amount: int, memo: str | None, key: str) -> dict[str, Any]:
@@ -90,10 +88,7 @@ async def _send_with_key(request: Request, address: str, amount: int, memo: str 
     sent = await request.app.state.client.send([recipient], str(uuid.uuid4()))
     fee = sent.get("fee")
     txid = sent.get("txid")
-    db.execute(
-        "UPDATE payouts SET txid = ?, fee_atomic = ?, error = NULL WHERE idempotency_key = ?",
-        (txid, fee if isinstance(fee, int) else None, key),
-    )
+    db.update_payout_sent(key, txid, fee if isinstance(fee, int) else None)
     return {
         "txid": txid, "address": address, "amount_atomic": amount,
         "fee_atomic": fee if isinstance(fee, int) else None, "memo": memo,
@@ -107,7 +102,7 @@ async def list_payouts_api(request: Request, _: None = Security(require_payout_k
 
 @router.get("/payouts/{payout_id}", response_model=PayoutOut, summary="Get payout")
 async def get_payout_api(payout_id: int, request: Request, _: None = Security(require_payout_key)):
-    row = db.query_one("SELECT * FROM payouts WHERE id = ?", (payout_id,))
+    row = db.get_payout(payout_id)
     if not row:
         raise HTTPException(status_code=404, detail="payout not found")
     return row

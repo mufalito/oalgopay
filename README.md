@@ -29,12 +29,17 @@ webhooks the moment money is seen and confirmed. No third party, no custody —
 your node, your wallet, your gateway.
 
 ```
-Blocknet core (headless) ──api.cookie──▶ watcher (SSE + poll) ──▶ SQLite
+Blocknet core (headless) ──api.cookie──▶ watcher (SSE + poll) ──▶ SQLAlchemy (SQLite default)
                                                 │
               merchant REST API ◀────────────── ┴──▶ signed webhooks ──▶ your shop
               hosted pay page (/pay/{id}, QR)
               admin panel (/admin)
 ```
+
+Storage is SQLite at `data/gateway.db` by default (WAL). Point the
+`database_url` config key — or the `OALGOPAY_DATABASE_URL` env var — at
+another SQLAlchemy URL (e.g. PostgreSQL) to move it; schema migrations run
+automatically on boot either way.
 
 ## Features
 

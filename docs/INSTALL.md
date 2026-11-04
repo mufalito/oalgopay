@@ -98,6 +98,11 @@ paymentgateway/
    | `admin_password`  | admin panel login                                                 |
    | `api_token`       | merchant API bearer token                                         |
    | `public_base_url` | externally reachable URL used to build `pay_url`                  |
+   | `database_url`    | optional — SQLAlchemy URL (default `data/gateway.db` SQLite); the `OALGOPAY_DATABASE_URL` env var overrides it |
+
+   `OALGOPAY_DATABASE_URL` / `database_url` divert **only the database**:
+   `session_secret` (admin cookie signing) and every other data file stay
+   under `data_dir` — keep them on the same volume if you relocate the DB.
 
    Admin panel: `http://<host>:8096/admin`. Create your first invoice from
    the panel (Invoices → Create) or the [merchant API](API.md).
@@ -171,11 +176,18 @@ journalctl --user -u oalgopay -f
    stop `oalgopay-core`, replace the binary, start again. **Match the core
    version to the chain db format** — check the release notes of
    `blocknetprivacy/core` before jumping versions.
-4. Start the gateway. Schema migrations run automatically on boot: the
-   idempotent base schema brings fresh databases current, and versioned
-   steps (recorded in the `schema_migrations` table) alter older databases
+4. Start the gateway. Schema migrations ([Alembic](https://alembic.sqlalchemy.org),
+   in `migrations/`) run automatically on boot and are recorded in the
+   `alembic_version` table — fresh databases get the full schema, older ones
+   (including those from the pre-Alembic `schema_migrations` era) are upgraded
    in place. The first log line also prints the exact version running
    (`git describe` when deployed from a checkout).
+
+   Rolling back to the pre-Alembic build (branch `main`) is safe: it
+   idempotently re-creates its own `schema_migrations` bookkeeping (its
+   migrations are guarded, so no DDL re-runs) and ignores `alembic_version` —
+   the two tables simply coexist, and a stamped database boots unchanged on
+   either version. The upgrade is a two-way door.
 
 **Wallet note:** any core restart unloads the wallet — payment watching only
 resumes after a reload (admin panel → Overview → **Load wallet**), or

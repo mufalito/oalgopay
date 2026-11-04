@@ -48,9 +48,9 @@ class TestChallengeLifecycle(unittest.TestCase):
         db.create_auth_challenge("nonce-a", NOW)
         row = db.get_auth_challenge("nonce-a")
         self.assertIsNotNone(row)
-        self.assertEqual(row["nonce"], "nonce-a")
-        self.assertEqual(row["created_at"], NOW)
-        self.assertIsNone(row["used_at"])
+        self.assertEqual(row.nonce, "nonce-a")
+        self.assertEqual(row.created_at, NOW)
+        self.assertIsNone(row.used_at)
 
     def test_consume_is_single_use(self):
         db.create_auth_challenge("nonce-b", NOW)
@@ -74,7 +74,7 @@ class TestChallengeLifecycle(unittest.TestCase):
         self.assertIsNone(db.get_auth_challenge("expired"))
         row = db.get_auth_challenge("fresh")
         self.assertIsNotNone(row)
-        self.assertIsNone(row["used_at"])
+        self.assertIsNone(row.used_at)
         # only the in-window attempt survived
         self.assertEqual(db.count_recent_auth_failures("1.2.3.4", NOW - LOCKOUT_WINDOW_S), 1)
 

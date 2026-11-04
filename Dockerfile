@@ -22,7 +22,8 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 COPY app ./app
 COPY bin/README.md ./bin/README.md
-COPY run.py config.example.json ./
+COPY run.py config.example.json alembic.ini ./
+COPY migrations ./migrations
 COPY --from=core /tmp/blocknet-core-amd64-linux ./bin/blocknet-core-amd64-linux
 ENV OALGOPAY_API_BASE=http://core:18512 \
     OALGOPAY_DATADIR=/app/data/blocknet \

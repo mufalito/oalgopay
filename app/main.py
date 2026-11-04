@@ -63,8 +63,7 @@ def _seed_api_keys(cfg: dict) -> None:
 
 def create_app(cfg: dict) -> FastAPI:
     config_mod.ensure_data_dir(cfg)
-    data_dir = Path(cfg["data_dir"])
-    db.connect(data_dir / "gateway.db")
+    db.connect(config_mod.database_url(cfg))
     _seed_api_keys(cfg)
 
     @asynccontextmanager

@@ -104,3 +104,10 @@ tar czf /backup/oalgopay-data.tgz /data`).
   build time (`ARG CORE_VERSION=0.22.0` to pin another).
 - TLS: put a reverse proxy (Caddy/nginx) in front of 8096 before exposing
   the panel publicly.
+- **Bare `docker run` without a mounted `config.json` looks dead from
+  outside** — by design. Unconfigured, the gateway binds `127.0.0.1`
+  *inside* the container, so the published port accepts TCP but nothing
+  answers (the unauthenticated setup wizard must not be network-reachable).
+  Either mount a completed `config.json`, or publish the port and set
+  `OALGOPAY_UNCONFIGURED_BIND=0.0.0.0` (what compose does) and finish the
+  wizard promptly.
