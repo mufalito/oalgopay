@@ -147,9 +147,7 @@ async def frag_overview(request: Request):
     settings = db.get_settings()
     display_handle = settings.get("display_handle", "")
     handle_info = await handle.resolve_handle(display_handle) if display_handle else None
-    counts = {s: 0 for s in ("pending", "seen", "confirmed", "expired", "cancelled")}
-    for row in db.query_all("SELECT status, COUNT(*) AS n FROM invoices GROUP BY status"):
-        counts[row["status"]] = row["n"]
+    counts.update(db.invoice_status_counts())
     return frag(request, "frags/_overview.html", {
         "node": node, "wallet": wallet, "handle_info": handle_info, "counts": counts,
     })

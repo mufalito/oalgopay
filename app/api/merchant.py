@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 import time
 from typing import Annotated, Any
+
+from sqlalchemy.exc import IntegrityError
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -73,7 +74,7 @@ def create_invoice_service(body: InvoiceCreateRequest | dict[str, Any], request:
         try:
             db.insert_invoice(row)
             break
-        except sqlite3.IntegrityError:
+        except IntegrityError:
             row["id"] = row["memo"] = inv["id"] = invoices.mint_id()
     else:
         raise HTTPException(status_code=500, detail="could not mint unique invoice id")

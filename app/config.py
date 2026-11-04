@@ -23,6 +23,18 @@ REQUIRED_KEYS = (
 )
 PLACEHOLDER_PREFIX = "CHANGE_ME"
 
+def database_url(cfg: dict[str, Any]) -> str:
+    """Database URL precedence: OALGOPAY_DATABASE_URL env > config
+    `database_url` key > derived SQLite default under data_dir. Existing
+    installs need no config change; switching engines is a URL change."""
+    env = os.environ.get("OALGOPAY_DATABASE_URL")
+    if env:
+        return env
+    configured = str(cfg.get("database_url") or "")
+    if configured:
+        return configured
+    return f"sqlite:///{(Path(cfg.get('data_dir') or DEFAULT_DATA_DIR) / 'gateway.db').as_posix()}"
+
 
 class ConfigError(RuntimeError):
     """Raised when the configuration is missing or unusable."""

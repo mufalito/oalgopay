@@ -5,5 +5,6 @@
   "datadir": "/opt/oalgopay/data/blocknet",
   "admin_password": "CHANGE_ME_admin_password",
   "payout_api_key": "",
-  "public_base_url": "http://localhost:8096"
+  "public_base_url": "http://localhost:8096",
+  "database_url": ""
 }
