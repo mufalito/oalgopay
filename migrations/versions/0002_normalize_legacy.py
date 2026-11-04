@@ -1,4 +1,4 @@
-"""pre-migration-era normalization: created_height + delivery dedupe columns
+"""created_height + delivery dedupe columns (no-op where already present)
 
 Revision ID: 0002
 Revises: 0001

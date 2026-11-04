@@ -100,6 +100,10 @@ paymentgateway/
    | `public_base_url` | externally reachable URL used to build `pay_url`                  |
    | `database_url`    | optional — SQLAlchemy URL (default `data/gateway.db` SQLite); the `OALGOPAY_DATABASE_URL` env var overrides it |
 
+   `OALGOPAY_DATABASE_URL` / `database_url` divert **only the database**:
+   `session_secret` (admin cookie signing) and every other data file stay
+   under `data_dir` — keep them on the same volume if you relocate the DB.
+
    Admin panel: `http://<host>:8096/admin`. Create your first invoice from
    the panel (Invoices → Create) or the [merchant API](API.md).
 
@@ -178,6 +182,12 @@ journalctl --user -u oalgopay -f
    (including those from the pre-Alembic `schema_migrations` era) are upgraded
    in place. The first log line also prints the exact version running
    (`git describe` when deployed from a checkout).
+
+   Rolling back to the pre-Alembic build (branch `main`) is safe: it
+   idempotently re-creates its own `schema_migrations` bookkeeping (its
+   migrations are guarded, so no DDL re-runs) and ignores `alembic_version` —
+   the two tables simply coexist, and a stamped database boots unchanged on
+   either version. The upgrade is a two-way door.
 
 **Wallet note:** any core restart unloads the wallet — payment watching only
 resumes after a reload (admin panel → Overview → **Load wallet**), or
