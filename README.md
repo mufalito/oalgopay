@@ -198,6 +198,7 @@ retry/dedupe contract: [docs/WEBHOOKS.md](docs/WEBHOOKS.md).
 - [Merchant API Reference](docs/API.md) — every endpoint, schema, and error
 - [Webhooks Guide](docs/WEBHOOKS.md) — events, payloads, signature verification, testing
 - [Admin Panel Guide](docs/ADMIN.md) — invoices & matching rules, payouts, settings
+- [Persistence Internals](docs/DATABASE.md) — SQLAlchemy 2.x design notes: entities vs Core, detached instances, migrations
 - Interactive OpenAPI: `/docs` (Swagger UI) and `/redoc` on the running gateway
 
 ## Security
