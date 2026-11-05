@@ -54,7 +54,7 @@ async def create_payout(body: PayoutCreateRequest, request: Request, _: None = S
             )
         existing = db.get_payout_by_key(client_key)
         if existing and existing.txid:
-            return {**PayoutOut.model_validate(existing).model_dump(), "replayed": True}
+            return {**PayoutOut.model_validate(existing).model_dump(), "idempotency_key": client_key, "replayed": True}
 
     amount = body.amount_atomic_resolved
     address = body.address.strip()
@@ -74,7 +74,7 @@ async def create_payout(body: PayoutCreateRequest, request: Request, _: None = S
 
     row = db.get_payout_by_key(attempt_key)
     payload = PayoutOut.model_validate(row).model_dump() if row else result
-    return {**payload, "replayed": False}
+    return {**payload, "idempotency_key": attempt_key, "replayed": False}
 
 
 async def _send_with_key(request: Request, address: str, amount: int, memo: str | None, key: str) -> dict[str, Any]:
